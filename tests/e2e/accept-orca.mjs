@@ -19,6 +19,8 @@
 //     disable and removal, and leaves nothing running.
 //
 // Usage: node tests/e2e/accept-orca.mjs   (after scripts/package-plugin.sh)
+// Set WORK_BOARD_INSTALL_GIT=https://host/repo.git#tag to exercise a
+// packaged Git distribution instead of installing the local build.
 import assert from "node:assert/strict";
 import { execFile, spawn, spawnSync } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync, appendFileSync } from "node:fs";
@@ -34,6 +36,17 @@ const { chromium } = createRequire(path.join(root, "web", "package.json"))("play
 const ORCA_CLI = "/Applications/Orca.app/Contents/Resources/bin/orca";
 const PLUGIN = path.join(root, "dist", "clioo.work-board");
 const KEY = "clioo.work-board";
+const gitInstall = process.env.WORK_BOARD_INSTALL_GIT;
+const installSource = gitInstall
+  ? (() => {
+      const parsed = new URL(gitInstall);
+      assert.equal(parsed.protocol, "https:", "Git acceptance requires HTTPS");
+      assert.ok(parsed.hash.length > 1, "Git acceptance requires an explicit #ref");
+      const ref = decodeURIComponent(parsed.hash.slice(1));
+      parsed.hash = "";
+      return { kind: "git", url: parsed.href, ref };
+    })()
+  : { kind: "local-path", path: PLUGIN };
 assert.ok(existsSync(path.join(PLUGIN, "bin", "work-board-svc")), "run scripts/package-plugin.sh first");
 
 const D = realpathSync(mkdtempSync("/tmp/owb-accept-"));
@@ -236,7 +249,7 @@ try {
   const mainWorktree = (await orca(["worktree", "list"])).worktrees[0].id;
 
   // ------------------------------------------------ 1. install + open --
-  const installed = await api((p) => window.api.plugins.install({ kind: "local-path", path: p }), PLUGIN);
+  const installed = await api((source) => window.api.plugins.install(source), installSource);
   assert.equal(installed.ok, true, JSON.stringify(installed));
   const pending = (await api(() => window.api.plugins.list())).find((p) => p.pluginKey === KEY);
   assert.equal(pending.status, "pending", "nothing runs before consent");
@@ -254,6 +267,13 @@ try {
   assert.equal((await orca(["tab", "list"])).tabs.filter((t) => t.url === base).length, 1);
   assert.equal((await rpc("board.status")).version, "0.2.0");
   check("the-plugin-installs-through-orca-and-open-work-board-opens-its-tab");
+  if (gitInstall) {
+    report.installSource = installSource;
+    const provenance = JSON.parse(readFileSync(path.join(service().root, "distribution.json"), "utf8"));
+    assert.equal(provenance.platform, "darwin");
+    assert.equal(provenance.arch, process.arch);
+    check("the-pinned-git-distribution-installs-and-runs-without-a-build-step");
+  }
 
   browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, colorScheme: "dark" });
@@ -347,7 +367,10 @@ try {
   });
   // A Claude session the user started continues its folder's latest
   // conversation (Orca keeps the conversation id to itself).
-  assert.ok(launches().some((l) => l.agent === "claude" && l.mode === "continue"), JSON.stringify(launches()));
+  // Linking the new terminal precedes its shell actually launching the agent.
+  await waitFor("the replacement agent launched in continue mode", async () =>
+    launches().some((l) => l.agent === "claude" && l.mode === "continue"),
+  );
   const replacementTab = (await terminalOf(replacement)).tabId;
   await waitFor("replacement in front", async () => (await activeTabId()) === replacementTab);
   check("a-stopped-session-is-resumed-by-its-click-and-replaces-the-old-link");
