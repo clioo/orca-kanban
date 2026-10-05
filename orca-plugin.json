@@ -1,0 +1,40 @@
+{
+  "manifestVersion": 1,
+  "id": "work-board",
+  "publisher": "clioo",
+  "name": "Work board",
+  "version": "0.2.2",
+  "description": "A Kanban of your Jira, Linear and GitHub tickets whose columns prompt the agents working them.",
+  "engines": {
+    "orca": ">=1.4.0"
+  },
+  "pluginApi": 1,
+  "main": "worker.mjs",
+  "contributes": {
+    "commands": [
+      {
+        "id": "open",
+        "title": "Open Work board"
+      }
+    ],
+    "events": [
+      {
+        "on": "agent.status.changed"
+      },
+      {
+        "on": "worktree.created"
+      },
+      {
+        "on": "worktree.removed"
+      }
+    ]
+  },
+  "capabilities": [
+    {
+      "kind": "events:subscribe"
+    },
+    {
+      "kind": "storage"
+    }
+  ]
+}
