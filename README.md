@@ -27,7 +27,26 @@ column prompts, and Jira, Linear, and GitHub integrations.
 
 ## Get started
 
-### Requirements
+### Install from a Git URL — macOS Apple Silicon
+
+No Node.js, Rust, or local compilation is required for this distribution.
+In **Orca → Settings → Plugins → Install plugin → Git URL**, paste:
+
+```text
+https://github.com/clioo/orca-kanban.git#macos-arm64-v0.2.0
+```
+
+Click **Install**, review the permissions, then enable the plugin. Press
+**Command + J** and run **Open Work board**.
+
+The `#macos-arm64-v0.2.0` tag contains the compiled plugin at the repository
+root. The default `main` branch contains source code and is **not** directly
+installable. Keep the `#tag` suffix: Orca requires a pinned tag or commit.
+This package is for M-series Macs only, not Intel Macs, Windows, or Linux.
+Each laptop keeps its own local board; installing does not transfer another
+machine's tickets, credentials, or agent sessions.
+
+### Build from source — requirements
 
 - Orca installed at `/Applications/Orca.app`, with plugins enabled.
 - Node.js 24 and pnpm 11.19.0 on your `PATH`.
@@ -169,6 +188,10 @@ pnpm --dir web exec playwright-core install chromium
 
 # Also run acceptance against the installed Orca, in an isolated profile.
 ./scripts/test-all.sh
+
+# Verify the public Git distribution through Orca's real installer.
+WORK_BOARD_INSTALL_GIT=https://github.com/clioo/orca-kanban.git#macos-arm64-v0.2.0 \
+  node tests/e2e/accept-orca.mjs
 
 # Regenerate screenshots from synthetic data; build the plugin first.
 node scripts/capture-screenshots.mjs
