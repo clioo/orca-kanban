@@ -1,0 +1,1293 @@
+{
+  "myself": {
+    "accountId": "fixture-user-1",
+    "displayName": "Carlos Fixture",
+    "emailAddress": "carlos@example.com",
+    "avatarUrls": {
+      "48x48": "https://www.gravatar.com/avatar/fixture?d=mm&s=48",
+      "32x32": "https://www.gravatar.com/avatar/fixture?d=mm&s=32",
+      "24x24": "https://www.gravatar.com/avatar/fixture?d=mm&s=24"
+    }
+  },
+  "projects": [
+    {
+      "id": "10000",
+      "key": "DROG",
+      "name": "Drogon"
+    },
+    {
+      "id": "10001",
+      "key": "ORCA",
+      "name": "Orca Core"
+    },
+    {
+      "id": "10002",
+      "key": "MNT",
+      "name": "Mentu Runtime"
+    },
+    {
+      "id": "10003",
+      "key": "WEB",
+      "name": "Website"
+    },
+    {
+      "id": "10004",
+      "key": "INFRA",
+      "name": "Infrastructure"
+    }
+  ],
+  "priorities": [
+    {
+      "id": "1",
+      "name": "Highest",
+      "iconUrl": "https://fixture.local/images/icons/priorities/highest.svg"
+    },
+    {
+      "id": "2",
+      "name": "High",
+      "iconUrl": "https://fixture.local/images/icons/priorities/high.svg"
+    },
+    {
+      "id": "3",
+      "name": "Medium",
+      "iconUrl": "https://fixture.local/images/icons/priorities/medium.svg"
+    },
+    {
+      "id": "4",
+      "name": "Low",
+      "iconUrl": "https://fixture.local/images/icons/priorities/low.svg"
+    }
+  ],
+  "users": [
+    {
+      "accountId": "fixture-user-1",
+      "displayName": "Carlos Fixture",
+      "emailAddress": "carlos@example.com",
+      "avatarUrls": {
+        "48x48": "https://www.gravatar.com/avatar/fixture?d=mm&s=48"
+      }
+    },
+    {
+      "accountId": "fixture-user-2",
+      "displayName": "Ana Garcia",
+      "emailAddress": "ana@example.com",
+      "avatarUrls": {
+        "48x48": "https://www.gravatar.com/avatar/fixture2?d=mm&s=48"
+      }
+    }
+  ],
+  "createmeta": {
+    "issueTypes": [
+      {
+        "id": "10000",
+        "name": "Epic",
+        "description": "A big user story",
+        "iconUrl": "https://fixture.local/images/icons/issuetypes/epic.svg",
+        "subtask": false
+      },
+      {
+        "id": "10001",
+        "name": "Task",
+        "description": "A task",
+        "iconUrl": "https://fixture.local/images/icons/issuetypes/task.svg",
+        "subtask": false
+      },
+      {
+        "id": "10002",
+        "name": "Bug",
+        "description": "A bug",
+        "iconUrl": "https://fixture.local/images/icons/issuetypes/bug.svg",
+        "subtask": false
+      },
+      {
+        "id": "10003",
+        "name": "Subtask",
+        "description": "A subtask",
+        "iconUrl": "https://fixture.local/images/icons/issuetypes/subtask.svg",
+        "subtask": true
+      }
+    ],
+    "fieldsByType": {
+      "10001": [
+        {
+          "key": "summary",
+          "name": "Summary",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "key": "issuetype",
+          "name": "Issue Type",
+          "required": true,
+          "schema": {
+            "type": "issuetype"
+          }
+        },
+        {
+          "key": "project",
+          "name": "Project",
+          "required": true,
+          "schema": {
+            "type": "project"
+          }
+        },
+        {
+          "key": "description",
+          "name": "Description",
+          "required": false,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "key": "assignee",
+          "name": "Assignee",
+          "required": false,
+          "schema": {
+            "type": "user"
+          },
+          "allowedValues": [
+            {
+              "id": "fixture-user-1",
+              "name": "Carlos Fixture"
+            },
+            {
+              "id": "fixture-user-2",
+              "name": "Ana Garcia"
+            }
+          ]
+        },
+        {
+          "key": "priority",
+          "name": "Priority",
+          "required": false,
+          "schema": {
+            "type": "priority"
+          },
+          "allowedValues": [
+            {
+              "id": "1",
+              "name": "Highest"
+            },
+            {
+              "id": "2",
+              "name": "High"
+            },
+            {
+              "id": "3",
+              "name": "Medium"
+            },
+            {
+              "id": "4",
+              "name": "Low"
+            }
+          ]
+        },
+        {
+          "key": "labels",
+          "name": "Labels",
+          "required": false,
+          "schema": {
+            "type": "array",
+            "items": "string"
+          }
+        },
+        {
+          "key": "custom_10001",
+          "fieldId": "customfield_10001",
+          "name": "Team",
+          "required": false,
+          "schema": {
+            "type": "option",
+            "custom": "com.atlassian.jira.plugin.system.customfieldtypes:select"
+          },
+          "allowedValues": [
+            {
+              "id": "1",
+              "value": "Core"
+            },
+            {
+              "id": "2",
+              "value": "Desktop"
+            }
+          ]
+        },
+        {
+          "key": "custom_10002",
+          "name": "Team",
+          "required": true,
+          "schema": {
+            "type": "option",
+            "custom": "com.atlassian.jira.plugin.system.customfieldtypes:select"
+          },
+          "allowedValues": [
+            {
+              "id": "1",
+              "value": "core"
+            },
+            {
+              "id": "2",
+              "value": "desktop"
+            },
+            {
+              "id": "3",
+              "value": "runtime"
+            }
+          ]
+        },
+        {
+          "key": "custom_10003",
+          "name": "Product Owner",
+          "required": true,
+          "schema": {
+            "type": "user"
+          }
+        },
+        {
+          "key": "custom_10004",
+          "name": "Components",
+          "required": false,
+          "schema": {
+            "type": "array",
+            "items": "string"
+          }
+        },
+        {
+          "key": "custom_10005",
+          "name": "Risk notes",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "custom": "com.atlassian.jira.plugin.system.customfieldtypes:textarea"
+          }
+        },
+        {
+          "key": "custom_10006",
+          "name": "Story points",
+          "required": false,
+          "schema": {
+            "type": "number"
+          }
+        }
+      ]
+    }
+  },
+  "issues": [
+    {
+      "id": "10001",
+      "key": "DROG-1",
+      "fields": {
+        "summary": "Project setup and repo bootstrap",
+        "project": {
+          "id": "10000",
+          "key": "DROG",
+          "name": "Drogon"
+        },
+        "issuetype": {
+          "id": "10001",
+          "name": "Task"
+        },
+        "status": {
+          "id": "3",
+          "name": "Backlog",
+          "statusCategory": {
+            "key": "new",
+            "name": "To Do"
+          }
+        },
+        "assignee": {
+          "accountId": "fixture-user-1",
+          "displayName": "Carlos Fixture",
+          "avatarUrls": {
+            "48x48": "https://www.gravatar.com/avatar/fixture?d=mm&s=48"
+          }
+        },
+        "reporter": {
+          "accountId": "fixture-user-2",
+          "displayName": "Ana Garcia"
+        },
+        "priority": {
+          "id": "2",
+          "name": "High"
+        },
+        "labels": [
+          "setup"
+        ],
+        "created": "2026-08-01T09:00:00.000+0000",
+        "updated": "2026-09-01T09:00:00.000+0000",
+        "description": {
+          "type": "doc",
+          "version": 1,
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Bootstrap the repository so the rewrite can start."
+                }
+              ]
+            },
+            {
+              "type": "heading",
+              "attrs": {
+                "level": 2
+              },
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Plan"
+                }
+              ]
+            },
+            {
+              "type": "bulletList",
+              "content": [
+                {
+                  "type": "listItem",
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "type": "text",
+                          "text": "cargo workspace layout"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "listItem",
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "type": "text",
+                          "text": "CI on Foundation"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "bulletList",
+                      "content": [
+                        {
+                          "type": "listItem",
+                          "content": [
+                            {
+                              "type": "paragraph",
+                              "content": [
+                                {
+                                  "type": "text",
+                                  "text": "fmt + clippy gates"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "codeBlock",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "cargo build --workspace --locked\n"
+                }
+              ]
+            },
+            {
+              "type": "mediaSingle",
+              "content": [
+                {
+                  "type": "media",
+                  "attrs": {
+                    "id": "attach-100",
+                    "alt": "Terminal screenshot"
+                  }
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "See "
+                },
+                {
+                  "type": "text",
+                  "text": "the wiki",
+                  "marks": [
+                    {
+                      "type": "link",
+                      "attrs": {
+                        "href": "https://fixture.local/wiki"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "10002",
+      "key": "DROG-2",
+      "fields": {
+        "summary": "Daemon session persistence",
+        "project": {
+          "id": "10000",
+          "key": "DROG",
+          "name": "Drogon"
+        },
+        "issuetype": {
+          "id": "10001",
+          "name": "Task"
+        },
+        "status": {
+          "id": "3",
+          "name": "Backlog",
+          "statusCategory": {
+            "key": "new",
+            "name": "To Do"
+          }
+        },
+        "assignee": {
+          "accountId": "fixture-user-1",
+          "displayName": "Carlos Fixture"
+        },
+        "reporter": {
+          "accountId": "fixture-user-2",
+          "displayName": "Ana Garcia"
+        },
+        "priority": {
+          "id": "3",
+          "name": "Medium"
+        },
+        "labels": [
+          "core"
+        ],
+        "created": "2026-08-02T09:00:00.000+0000",
+        "updated": "2026-09-02T09:00:00.000+0000",
+        "description": {
+          "type": "doc",
+          "version": 1,
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Second issue body."
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "10003",
+      "key": "DROG-3",
+      "fields": {
+        "summary": "Sidebar worktree cards",
+        "project": {
+          "id": "10000",
+          "key": "DROG",
+          "name": "Drogon"
+        },
+        "issuetype": {
+          "id": "10002",
+          "name": "Bug"
+        },
+        "status": {
+          "id": "3",
+          "name": "Backlog",
+          "statusCategory": {
+            "key": "new",
+            "name": "To Do"
+          }
+        },
+        "assignee": null,
+        "reporter": {
+          "accountId": "fixture-user-1",
+          "displayName": "Carlos Fixture"
+        },
+        "priority": null,
+        "labels": [
+          "ui"
+        ],
+        "created": "2026-08-03T09:00:00.000+0000",
+        "updated": "2026-09-03T09:00:00.000+0000"
+      }
+    },
+    {
+      "id": "10004",
+      "key": "DROG-4",
+      "fields": {
+        "summary": "Terminal tab agent status",
+        "project": {
+          "id": "10000",
+          "key": "DROG",
+          "name": "Drogon"
+        },
+        "issuetype": {
+          "id": "10001",
+          "name": "Task"
+        },
+        "status": {
+          "id": "3",
+          "name": "Backlog",
+          "statusCategory": {
+            "key": "new",
+            "name": "To Do"
+          }
+        },
+        "assignee": {
+          "accountId": "fixture-user-1",
+          "displayName": "Carlos Fixture"
+        },
+        "reporter": {
+          "accountId": "fixture-user-2",
+          "displayName": "Ana Garcia"
+        },
+        "priority": {
+          "id": "2",
+          "name": "High"
+        },
+        "labels": [
+          "ui",
+          "terminal"
+        ],
+        "created": "2026-08-04T09:00:00.000+0000",
+        "updated": "2026-09-04T09:00:00.000+0000"
+      }
+    },
+    {
+      "id": "10005",
+      "key": "DROG-5",
+      "fields": {
+        "summary": "Palette and quick open",
+        "project": {
+          "id": "10000",
+          "key": "DROG",
+          "name": "Drogon"
+        },
+        "issuetype": {
+          "id": "10001",
+          "name": "Task"
+        },
+        "status": {
+          "id": "3",
+          "name": "Backlog",
+          "statusCategory": {
+            "key": "new",
+            "name": "To Do"
+          }
+        },
+        "assignee": {
+          "accountId": "fixture-user-2",
+          "displayName": "Ana Garcia"
+        },
+        "reporter": {
+          "accountId": "fixture-user-1",
+          "displayName": "Carlos Fixture"
+        },
+        "labels": [
+          "ui"
+        ],
+        "created": "2026-08-05T09:00:00.000+0000",
+        "updated": "2026-09-05T09:00:00.000+0000"
+      }
+    },
+    {
+      "id": "10006",
+      "key": "DROG-6",
+      "fields": {
+        "summary": "Git changes panel diffs",
+        "project": {
+          "id": "10000",
+          "key": "DROG",
+          "name": "Drogon"
+        },
+        "issuetype": {
+          "id": "10001",
+          "name": "Task"
+        },
+        "status": {
+          "id": "3",
+          "name": "Backlog",
+          "statusCategory": {
+            "key": "new",
+            "name": "To Do"
+          }
+        },
+        "assignee": {
+          "accountId": "fixture-user-1",
+          "displayName": "Carlos Fixture"
+        },
+        "reporter": {
+          "accountId": "fixture-user-2",
+          "displayName": "Ana Garcia"
+        },
+        "priority": {
+          "id": "4",
+          "name": "Low"
+        },
+        "labels": [
+          "git"
+        ],
+        "created": "2026-08-06T09:00:00.000+0000",
+        "updated": "2026-09-06T09:00:00.000+0000"
+      }
+    },
+    {
+      "id": "10007",
+      "key": "DROG-7",
+      "fields": {
+        "summary": "Browser pane navigation",
+        "project": {
+          "id": "10000",
+          "key": "DROG",
+          "name": "Drogon"
+        },
+        "issuetype": {
+          "id": "10001",
+          "name": "Task"
+        },
+        "status": {
+          "id": "3",
+          "name": "Backlog",
+          "statusCategory": {
+            "key": "new",
+            "name": "To Do"
+          }
+        },
+        "assignee": null,
+        "reporter": {
+          "accountId": "fixture-user-2",
+          "displayName": "Ana Garcia"
+        },
+        "priority": {
+          "id": "3",
+          "name": "Medium"
+        },
+        "labels": [
+          "browser"
+        ],
+        "created": "2026-08-07T09:00:00.000+0000",
+        "updated": "2026-09-07T09:00:00.000+0000"
+      }
+    },
+    {
+      "id": "10008",
+      "key": "DROG-8",
+      "fields": {
+        "summary": "Bots chat over bot.run",
+        "project": {
+          "id": "10000",
+          "key": "DROG",
+          "name": "Drogon"
+        },
+        "issuetype": {
+          "id": "10000",
+          "name": "Epic"
+        },
+        "status": {
+          "id": "3",
+          "name": "Backlog",
+          "statusCategory": {
+            "key": "new",
+            "name": "To Do"
+          }
+        },
+        "assignee": {
+          "accountId": "fixture-user-1",
+          "displayName": "Carlos Fixture"
+        },
+        "reporter": {
+          "accountId": "fixture-user-2",
+          "displayName": "Ana Garcia"
+        },
+        "priority": {
+          "id": "2",
+          "name": "High"
+        },
+        "labels": [
+          "bots"
+        ],
+        "created": "2026-08-08T09:00:00.000+0000",
+        "updated": "2026-09-08T09:00:00.000+0000"
+      }
+    },
+    {
+      "id": "10009",
+      "key": "DROG-9",
+      "fields": {
+        "summary": "Mentu recipe panel",
+        "project": {
+          "id": "10000",
+          "key": "DROG",
+          "name": "Drogon"
+        },
+        "issuetype": {
+          "id": "10001",
+          "name": "Task"
+        },
+        "status": {
+          "id": "3",
+          "name": "Backlog",
+          "statusCategory": {
+            "key": "new",
+            "name": "To Do"
+          }
+        },
+        "assignee": {
+          "accountId": "fixture-user-2",
+          "displayName": "Ana Garcia"
+        },
+        "reporter": {
+          "accountId": "fixture-user-1",
+          "displayName": "Carlos Fixture"
+        },
+        "labels": [
+          "mentu"
+        ],
+        "created": "2026-08-09T09:00:00.000+0000",
+        "updated": "2026-09-09T09:00:00.000+0000"
+      }
+    },
+    {
+      "id": "10010",
+      "key": "DROG-10",
+      "fields": {
+        "summary": "Automations cron scheduler",
+        "project": {
+          "id": "10000",
+          "key": "DROG",
+          "name": "Drogon"
+        },
+        "issuetype": {
+          "id": "10001",
+          "name": "Task"
+        },
+        "status": {
+          "id": "3",
+          "name": "Backlog",
+          "statusCategory": {
+            "key": "new",
+            "name": "To Do"
+          }
+        },
+        "assignee": {
+          "accountId": "fixture-user-1",
+          "displayName": "Carlos Fixture"
+        },
+        "reporter": {
+          "accountId": "fixture-user-2",
+          "displayName": "Ana Garcia"
+        },
+        "priority": {
+          "id": "3",
+          "name": "Medium"
+        },
+        "labels": [
+          "automations"
+        ],
+        "created": "2026-08-10T09:00:00.000+0000",
+        "updated": "2026-09-10T09:00:00.000+0000"
+      }
+    },
+    {
+      "id": "10011",
+      "key": "DROG-11",
+      "fields": {
+        "summary": "Notifications on agent input",
+        "project": {
+          "id": "10000",
+          "key": "DROG",
+          "name": "Drogon"
+        },
+        "issuetype": {
+          "id": "10002",
+          "name": "Bug"
+        },
+        "status": {
+          "id": "3",
+          "name": "Backlog",
+          "statusCategory": {
+            "key": "new",
+            "name": "To Do"
+          }
+        },
+        "assignee": null,
+        "reporter": {
+          "accountId": "fixture-user-1",
+          "displayName": "Carlos Fixture"
+        },
+        "priority": null,
+        "labels": [
+          "notifications"
+        ],
+        "created": "2026-08-11T09:00:00.000+0000",
+        "updated": "2026-09-11T09:00:00.000+0000"
+      }
+    },
+    {
+      "id": "10012",
+      "key": "DROG-12",
+      "fields": {
+        "summary": "Settings theme and keybindings",
+        "project": {
+          "id": "10000",
+          "key": "DROG",
+          "name": "Drogon"
+        },
+        "issuetype": {
+          "id": "10001",
+          "name": "Task"
+        },
+        "status": {
+          "id": "3",
+          "name": "Backlog",
+          "statusCategory": {
+            "key": "new",
+            "name": "To Do"
+          }
+        },
+        "assignee": {
+          "accountId": "fixture-user-1",
+          "displayName": "Carlos Fixture"
+        },
+        "reporter": {
+          "accountId": "fixture-user-2",
+          "displayName": "Ana Garcia"
+        },
+        "priority": {
+          "id": "4",
+          "name": "Low"
+        },
+        "labels": [
+          "settings"
+        ],
+        "created": "2026-08-12T09:00:00.000+0000",
+        "updated": "2026-09-12T09:00:00.000+0000"
+      }
+    },
+    {
+      "id": "10013",
+      "key": "DROG-13",
+      "fields": {
+        "summary": "Tasks page GitHub source",
+        "project": {
+          "id": "10000",
+          "key": "DROG",
+          "name": "Drogon"
+        },
+        "issuetype": {
+          "id": "10001",
+          "name": "Task"
+        },
+        "status": {
+          "id": "3",
+          "name": "Backlog",
+          "statusCategory": {
+            "key": "new",
+            "name": "To Do"
+          }
+        },
+        "assignee": {
+          "accountId": "fixture-user-2",
+          "displayName": "Ana Garcia"
+        },
+        "reporter": {
+          "accountId": "fixture-user-1",
+          "displayName": "Carlos Fixture"
+        },
+        "priority": {
+          "id": "2",
+          "name": "High"
+        },
+        "labels": [
+          "tasks"
+        ],
+        "created": "2026-08-13T09:00:00.000+0000",
+        "updated": "2026-09-13T09:00:00.000+0000"
+      }
+    },
+    {
+      "id": "10014",
+      "key": "DROG-14",
+      "fields": {
+        "summary": "Native notifications bridge",
+        "project": {
+          "id": "10000",
+          "key": "DROG",
+          "name": "Drogon"
+        },
+        "issuetype": {
+          "id": "10001",
+          "name": "Task"
+        },
+        "status": {
+          "id": "4",
+          "name": "In Progress",
+          "statusCategory": {
+            "key": "indeterminate",
+            "name": "In Progress"
+          }
+        },
+        "assignee": {
+          "accountId": "fixture-user-1",
+          "displayName": "Carlos Fixture"
+        },
+        "reporter": {
+          "accountId": "fixture-user-2",
+          "displayName": "Ana Garcia"
+        },
+        "priority": {
+          "id": "2",
+          "name": "High"
+        },
+        "labels": [
+          "notifications"
+        ],
+        "resolution": null,
+        "created": "2026-08-14T09:00:00.000+0000",
+        "updated": "2026-09-14T09:00:00.000+0000"
+      }
+    },
+    {
+      "id": "10015",
+      "key": "ORCA-1",
+      "fields": {
+        "summary": "Status bar usage meters",
+        "project": {
+          "id": "10001",
+          "key": "ORCA",
+          "name": "Orca Core"
+        },
+        "issuetype": {
+          "id": "10001",
+          "name": "Task"
+        },
+        "status": {
+          "id": "4",
+          "name": "In Progress",
+          "statusCategory": {
+            "key": "indeterminate",
+            "name": "In Progress"
+          }
+        },
+        "assignee": {
+          "accountId": "fixture-user-1",
+          "displayName": "Carlos Fixture"
+        },
+        "reporter": {
+          "accountId": "fixture-user-2",
+          "displayName": "Ana Garcia"
+        },
+        "priority": {
+          "id": "3",
+          "name": "Medium"
+        },
+        "labels": [
+          "statusbar"
+        ],
+        "resolution": null,
+        "created": "2026-08-15T09:00:00.000+0000",
+        "updated": "2026-09-15T09:00:00.000+0000"
+      }
+    },
+    {
+      "id": "10016",
+      "key": "ORCA-2",
+      "fields": {
+        "summary": "Status bar awake toggle",
+        "project": {
+          "id": "10001",
+          "key": "ORCA",
+          "name": "Orca Core"
+        },
+        "issuetype": {
+          "id": "10001",
+          "name": "Task"
+        },
+        "status": {
+          "id": "5",
+          "name": "In Review",
+          "statusCategory": {
+            "key": "indeterminate",
+            "name": "In Progress"
+          }
+        },
+        "assignee": {
+          "accountId": "fixture-user-2",
+          "displayName": "Ana Garcia"
+        },
+        "reporter": {
+          "accountId": "fixture-user-1",
+          "displayName": "Carlos Fixture"
+        },
+        "labels": [
+          "statusbar"
+        ],
+        "resolution": null,
+        "created": "2026-08-16T09:00:00.000+0000",
+        "updated": "2026-09-16T09:00:00.000+0000"
+      }
+    },
+    {
+      "id": "10017",
+      "key": "MNT-1",
+      "fields": {
+        "summary": "Recipe run records",
+        "project": {
+          "id": "10002",
+          "key": "MNT",
+          "name": "Mentu Runtime"
+        },
+        "issuetype": {
+          "id": "10002",
+          "name": "Bug"
+        },
+        "status": {
+          "id": "6",
+          "name": "Selected for Development",
+          "statusCategory": {
+            "key": "new",
+            "name": "To Do"
+          }
+        },
+        "assignee": {
+          "accountId": "fixture-user-1",
+          "displayName": "Carlos Fixture"
+        },
+        "reporter": {
+          "accountId": "fixture-user-2",
+          "displayName": "Ana Garcia"
+        },
+        "priority": {
+          "id": "2",
+          "name": "High"
+        },
+        "labels": [
+          "mentu"
+        ],
+        "resolution": null,
+        "created": "2026-08-17T09:00:00.000+0000",
+        "updated": "2026-09-17T09:00:00.000+0000"
+      }
+    },
+    {
+      "id": "10018",
+      "key": "WEB-1",
+      "fields": {
+        "summary": "Landing copy refresh",
+        "project": {
+          "id": "10003",
+          "key": "WEB",
+          "name": "Website"
+        },
+        "issuetype": {
+          "id": "10001",
+          "name": "Task"
+        },
+        "status": {
+          "id": "7",
+          "name": "Done",
+          "statusCategory": {
+            "key": "done",
+            "name": "Done"
+          }
+        },
+        "assignee": {
+          "accountId": "fixture-user-1",
+          "displayName": "Carlos Fixture"
+        },
+        "reporter": {
+          "accountId": "fixture-user-2",
+          "displayName": "Ana Garcia"
+        },
+        "priority": {
+          "id": "3",
+          "name": "Medium"
+        },
+        "labels": [
+          "web"
+        ],
+        "resolution": {
+          "id": "10000",
+          "name": "Done"
+        },
+        "created": "2026-08-18T09:00:00.000+0000",
+        "updated": "2026-09-18T09:00:00.000+0000"
+      }
+    },
+    {
+      "id": "10019",
+      "key": "INFRA-1",
+      "fields": {
+        "summary": "Nightly signed build",
+        "project": {
+          "id": "10004",
+          "key": "INFRA",
+          "name": "Infrastructure"
+        },
+        "issuetype": {
+          "id": "10001",
+          "name": "Task"
+        },
+        "status": {
+          "id": "7",
+          "name": "Done",
+          "statusCategory": {
+            "key": "done",
+            "name": "Done"
+          }
+        },
+        "assignee": {
+          "accountId": "fixture-user-1",
+          "displayName": "Carlos Fixture"
+        },
+        "reporter": {
+          "accountId": "fixture-user-1",
+          "displayName": "Carlos Fixture"
+        },
+        "priority": {
+          "id": "4",
+          "name": "Low"
+        },
+        "labels": [
+          "infra"
+        ],
+        "resolution": {
+          "id": "10000",
+          "name": "Done"
+        },
+        "created": "2026-08-19T09:00:00.000+0000",
+        "updated": "2026-09-19T09:00:00.000+0000"
+      }
+    }
+  ],
+  "comments": {
+    "DROG-1": [
+      {
+        "id": "20001",
+        "created": "2026-08-02T09:00:00.000+0000",
+        "updated": "2026-08-02T09:00:00.000+0000",
+        "author": {
+          "accountId": "fixture-user-2",
+          "displayName": "Ana Garcia",
+          "avatarUrls": {
+            "48x48": "https://www.gravatar.com/avatar/fixture2?d=mm&s=48"
+          }
+        },
+        "body": {
+          "type": "doc",
+          "version": 1,
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Repo skeleton looks good."
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "20002",
+        "created": "2026-08-03T09:00:00.000+0000",
+        "author": {
+          "accountId": "fixture-user-1",
+          "displayName": "Carlos Fixture"
+        },
+        "body": {
+          "type": "doc",
+          "version": 1,
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "One question:"
+                }
+              ]
+            },
+            {
+              "type": "orderedList",
+              "content": [
+                {
+                  "type": "listItem",
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "type": "text",
+                          "text": "which Rust version?"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ],
+    "DROG-2": [
+      {
+        "id": "20010",
+        "created": "2026-08-05T09:00:00.000+0000",
+        "author": {
+          "accountId": "fixture-user-1",
+          "displayName": "Carlos Fixture"
+        },
+        "body": "Plain string body (Server/DC wiki shape)."
+      }
+    ]
+  },
+  "transitions": [
+    {
+      "id": "11",
+      "name": "Start Progress",
+      "to": {
+        "id": "4",
+        "name": "In Progress",
+        "statusCategory": {
+          "key": "indeterminate",
+          "name": "In Progress"
+        }
+      }
+    },
+    {
+      "id": "21",
+      "name": "Done",
+      "to": {
+        "id": "5",
+        "name": "Done",
+        "statusCategory": {
+          "key": "done",
+          "name": "Done"
+        }
+      }
+    }
+  ]
+}

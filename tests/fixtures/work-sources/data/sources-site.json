@@ -1,0 +1,431 @@
+{
+  "linear": {
+    "apiKey": "lin_api_fixture",
+    "viewer": {
+      "id": "lin-user-1",
+      "name": "Jon Doe",
+      "email": "carlos@example.com"
+    },
+    "organization": {
+      "name": "Drogon Fixture",
+      "urlKey": "drogon"
+    },
+    "teams": [
+      {
+        "id": "team-eng",
+        "key": "ENG",
+        "name": "Engineering",
+        "cyclesEnabled": true,
+        "states": [
+          {
+            "id": "st-backlog",
+            "name": "Backlog",
+            "type": "backlog",
+            "position": 0
+          },
+          {
+            "id": "st-todo",
+            "name": "Todo",
+            "type": "unstarted",
+            "position": 1
+          },
+          {
+            "id": "st-progress",
+            "name": "In Progress",
+            "type": "started",
+            "position": 2
+          },
+          {
+            "id": "st-review",
+            "name": "In Review",
+            "type": "started",
+            "position": 3
+          },
+          {
+            "id": "st-done",
+            "name": "Done",
+            "type": "completed",
+            "position": 4
+          },
+          {
+            "id": "st-canceled",
+            "name": "Canceled",
+            "type": "canceled",
+            "position": 5
+          }
+        ],
+        "cycles": [
+          {
+            "id": "cy-11",
+            "number": 11,
+            "name": null,
+            "startsAt": "2026-08-31T00:00:00.000Z",
+            "endsAt": "2026-09-14T00:00:00.000Z",
+            "completedAt": "2026-09-14T00:00:00.000Z",
+            "isActive": false
+          },
+          {
+            "id": "cy-12",
+            "number": 12,
+            "name": "Resume polish",
+            "startsAt": "2026-09-14T00:00:00.000Z",
+            "endsAt": "2026-09-28T00:00:00.000Z",
+            "completedAt": null,
+            "isActive": true
+          },
+          {
+            "id": "cy-13",
+            "number": 13,
+            "name": null,
+            "startsAt": "2026-09-28T00:00:00.000Z",
+            "endsAt": "2026-10-12T00:00:00.000Z",
+            "completedAt": null,
+            "isActive": false
+          }
+        ]
+      },
+      {
+        "id": "team-ops",
+        "key": "OPS",
+        "name": "Operations",
+        "cyclesEnabled": false,
+        "states": [
+          {
+            "id": "ops-todo",
+            "name": "Todo",
+            "type": "unstarted",
+            "position": 0
+          },
+          {
+            "id": "ops-doing",
+            "name": "Doing",
+            "type": "started",
+            "position": 1
+          },
+          {
+            "id": "ops-done",
+            "name": "Done",
+            "type": "completed",
+            "position": 2
+          }
+        ],
+        "cycles": []
+      }
+    ],
+    "issues": [
+      {
+        "id": "li-1",
+        "identifier": "ENG-1",
+        "team": "team-eng",
+        "title": "Resume Linear sessions after review",
+        "description": "Resume a session with its context after review.",
+        "priority": "High",
+        "assignee": "Jon Doe",
+        "state": "st-review",
+        "cycle": "cy-12",
+        "labels": [
+          "backend"
+        ],
+        "project": "Resume"
+      },
+      {
+        "id": "li-2",
+        "identifier": "ENG-2",
+        "team": "team-eng",
+        "title": "Cycle picker in the board",
+        "description": "",
+        "priority": "Medium",
+        "assignee": "Ana Lopez",
+        "state": "st-todo",
+        "cycle": "cy-12",
+        "labels": [],
+        "project": null
+      },
+      {
+        "id": "li-3",
+        "identifier": "ENG-3",
+        "team": "team-eng",
+        "title": "Map Linear workflow states",
+        "description": "",
+        "priority": "Low",
+        "assignee": null,
+        "state": "st-progress",
+        "cycle": "cy-12",
+        "labels": [],
+        "project": "Resume"
+      },
+      {
+        "id": "li-4",
+        "identifier": "ENG-4",
+        "team": "team-eng",
+        "title": "Old cycle leftover",
+        "description": "",
+        "priority": "No priority",
+        "assignee": null,
+        "state": "st-done",
+        "cycle": null,
+        "labels": [],
+        "project": null
+      },
+      {
+        "id": "li-5",
+        "identifier": "ENG-5",
+        "team": "team-eng",
+        "title": "Backlog idea",
+        "description": "",
+        "priority": "Urgent",
+        "assignee": null,
+        "state": "st-backlog",
+        "cycle": null,
+        "labels": [],
+        "project": "Board"
+      },
+      {
+        "id": "li-6",
+        "identifier": "OPS-1",
+        "team": "team-ops",
+        "title": "Rotate fixture credentials",
+        "description": "",
+        "priority": "Medium",
+        "assignee": "Jon Doe",
+        "state": "ops-doing",
+        "cycle": null,
+        "labels": [],
+        "project": null
+      }
+    ]
+  },
+  "github": {
+    "token": "ghp_fixture",
+    "viewer": {
+      "login": "octo-fixture",
+      "name": "Octo Fixture"
+    },
+    "repos": [
+      {
+        "full_name": "clioo/drogon",
+        "has_issues": true
+      },
+      {
+        "full_name": "octo-fixture/notes",
+        "has_issues": true
+      }
+    ],
+    "projects": [
+      {
+        "id": "PVT_roadmap",
+        "number": 1,
+        "title": "Drogon Roadmap",
+        "owner": "octo-fixture",
+        "closed": false,
+        "status": {
+          "id": "PVTSSF_status",
+          "options": [
+            {
+              "id": "opt-todo",
+              "name": "Todo"
+            },
+            {
+              "id": "opt-progress",
+              "name": "In Progress"
+            },
+            {
+              "id": "opt-done",
+              "name": "Done"
+            }
+          ]
+        },
+        "priority": {
+          "id": "PVTSSF_priority",
+          "options": [
+            {
+              "id": "pri-0",
+              "name": "P0"
+            },
+            {
+              "id": "pri-1",
+              "name": "P1"
+            },
+            {
+              "id": "pri-2",
+              "name": "P2"
+            }
+          ]
+        },
+        "iteration": {
+          "id": "PVTIF_iteration",
+          "iterations": [
+            {
+              "id": "it-1",
+              "title": "Iteration 1",
+              "offsetDays": -21,
+              "duration": 14,
+              "completed": true
+            },
+            {
+              "id": "it-2",
+              "title": "Iteration 2",
+              "offsetDays": -7,
+              "duration": 14
+            },
+            {
+              "id": "it-3",
+              "title": "Iteration 3",
+              "offsetDays": 7,
+              "duration": 14
+            }
+          ]
+        }
+      },
+      {
+        "id": "PVT_ops",
+        "number": 2,
+        "title": "Ops Board",
+        "owner": "octo-fixture",
+        "closed": false,
+        "status": {
+          "id": "PVTSSF_ops",
+          "options": [
+            {
+              "id": "ops-open",
+              "name": "Open"
+            },
+            {
+              "id": "ops-closed",
+              "name": "Closed"
+            }
+          ]
+        }
+      }
+    ],
+    "issues": [
+      {
+        "repo": "clioo/drogon",
+        "number": 10,
+        "title": "Sync GitHub Projects",
+        "body": "Board columns from the Status field.",
+        "state": "open",
+        "assignees": [
+          "octo-fixture"
+        ],
+        "labels": [
+          "enhancement"
+        ]
+      },
+      {
+        "repo": "clioo/drogon",
+        "number": 11,
+        "title": "Iteration picker",
+        "body": "",
+        "state": "open",
+        "assignees": [],
+        "labels": []
+      },
+      {
+        "repo": "clioo/drogon",
+        "number": 12,
+        "title": "Close stale issues",
+        "body": "",
+        "state": "closed",
+        "assignees": [],
+        "labels": []
+      },
+      {
+        "repo": "clioo/drogon",
+        "number": 13,
+        "title": "Backlog issue",
+        "body": "",
+        "state": "open",
+        "assignees": [],
+        "labels": [
+          "bug"
+        ]
+      },
+      {
+        "repo": "clioo/drogon",
+        "number": 14,
+        "title": "Carry work across iterations",
+        "body": "",
+        "state": "open",
+        "assignees": [
+          "octo-fixture"
+        ],
+        "labels": []
+      },
+      {
+        "repo": "clioo/drogon",
+        "number": 15,
+        "title": "Fix pull request link",
+        "body": "",
+        "state": "open",
+        "assignees": [],
+        "labels": [],
+        "pullRequest": true
+      }
+    ],
+    "items": [
+      {
+        "id": "PVTI_10",
+        "project": "PVT_roadmap",
+        "issue": "clioo/drogon#10",
+        "status": "opt-progress",
+        "priority": "pri-0",
+        "iteration": "it-2"
+      },
+      {
+        "id": "PVTI_11",
+        "project": "PVT_roadmap",
+        "issue": "clioo/drogon#11",
+        "status": "opt-todo",
+        "priority": "pri-1",
+        "iteration": "it-2"
+      },
+      {
+        "id": "PVTI_12",
+        "project": "PVT_roadmap",
+        "issue": "clioo/drogon#12",
+        "status": "opt-done",
+        "priority": null,
+        "iteration": "it-1"
+      },
+      {
+        "id": "PVTI_13",
+        "project": "PVT_roadmap",
+        "issue": "clioo/drogon#13",
+        "status": null,
+        "priority": "pri-2",
+        "iteration": null
+      },
+      {
+        "id": "PVTI_14",
+        "project": "PVT_roadmap",
+        "issue": "clioo/drogon#14",
+        "status": "opt-todo",
+        "priority": null,
+        "iteration": "it-2"
+      },
+      {
+        "id": "PVTI_15",
+        "project": "PVT_roadmap",
+        "issue": "clioo/drogon#15",
+        "status": "opt-progress",
+        "priority": null,
+        "iteration": "it-2"
+      },
+      {
+        "id": "PVTI_draft",
+        "project": "PVT_roadmap",
+        "draft": "A draft idea",
+        "status": "opt-todo",
+        "priority": null,
+        "iteration": null
+      },
+      {
+        "id": "PVTI_ops10",
+        "project": "PVT_ops",
+        "issue": "clioo/drogon#10",
+        "status": "ops-open"
+      }
+    ]
+  }
+}

@@ -1,0 +1,3703 @@
+/* Design tokens, bundled fonts and base layer ported from the Orca source
+   (src/renderer/src/assets/main.css, top sections), MIT Copyright (c) 2026
+   Lovecast Inc. Imports are trimmed to what Drogon bundles; token values,
+   font stacks and the base layer are verbatim. */
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@font-face {
+  font-family: 'Geist';
+  src: url('./fonts/Geist-Variable.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Orca Nerd Font Symbols';
+  src: url('./fonts/SymbolsNerdFontMono-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+E000-F8FF, U+F0000-FFFFD, U+100000-10FFFD;
+}
+
+@custom-variant dark (&:is(.dark *));
+
+/* Why: hover-reveal controls (sidebar/row action buttons) hide with `opacity-0`
+   and fade in via `group-hover`. Touch devices have no hover, so those controls
+   stay invisible. Gate the hide behind `can-hover:` so touch (hover: none) keeps
+   them visible while pointer devices preserve the reveal-on-hover behavior. */
+@custom-variant can-hover (@media (hover: hover));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-agent-question: var(--agent-question);
+  --color-agent-question-text: var(--agent-question-text);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-worktree-sidebar: var(--worktree-sidebar);
+  --color-worktree-sidebar-foreground: var(--worktree-sidebar-foreground);
+  --color-worktree-sidebar-accent: var(--worktree-sidebar-accent);
+  --color-worktree-sidebar-accent-foreground: var(--worktree-sidebar-accent-foreground);
+  --color-worktree-sidebar-border: var(--worktree-sidebar-border);
+  --color-worktree-sidebar-ring: var(--worktree-sidebar-ring);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-terminal-pane-title-on-dark-fg: var(--terminal-pane-title-on-dark-fg);
+  --color-terminal-pane-title-on-dark-input-fg: var(--terminal-pane-title-on-dark-input-fg);
+  --color-terminal-pane-title-on-dark-placeholder: var(--terminal-pane-title-on-dark-placeholder);
+  --color-terminal-pane-title-on-dark-button-fg: var(--terminal-pane-title-on-dark-button-fg);
+  --color-terminal-pane-title-on-dark-button-hover-fg: var(
+    --terminal-pane-title-on-dark-button-hover-fg
+  );
+  --color-terminal-pane-title-on-dark-input-bg: var(--terminal-pane-title-on-dark-input-bg);
+  --color-terminal-pane-title-on-dark-separator: var(--terminal-pane-title-on-dark-separator);
+  --color-terminal-pane-title-on-light-fg: var(--terminal-pane-title-on-light-fg);
+  --color-terminal-pane-title-on-light-input-fg: var(--terminal-pane-title-on-light-input-fg);
+  --color-terminal-pane-title-on-light-placeholder: var(--terminal-pane-title-on-light-placeholder);
+  --color-terminal-pane-title-on-light-button-fg: var(--terminal-pane-title-on-light-button-fg);
+  --color-terminal-pane-title-on-light-button-hover-fg: var(
+    --terminal-pane-title-on-light-button-hover-fg
+  );
+  --color-terminal-pane-title-on-light-input-bg: var(--terminal-pane-title-on-light-input-bg);
+  --color-terminal-pane-title-on-light-separator: var(--terminal-pane-title-on-light-separator);
+  --color-ai-action-accent: var(--ai-action-accent);
+  --color-status-success: var(--status-success);
+  --color-status-success-background: var(--status-success-background);
+  --color-status-success-border: var(--status-success-border);
+  --color-workspace-status-done: var(--workspace-status-done);
+  --color-workspace-status-review: var(--workspace-status-review);
+  --color-workspace-status-progress: var(--workspace-status-progress);
+  --color-tab-group-split-divider: var(--tab-group-split-divider);
+  --color-tab-group-split-divider-strong: var(--tab-group-split-divider-strong);
+  --color-git-graph-ref: var(--git-graph-ref);
+  --color-git-graph-remote-ref: var(--git-graph-remote-ref);
+  --color-git-graph-base-ref: var(--git-graph-base-ref);
+  --color-git-graph-lane-1: var(--git-graph-lane-1);
+  --color-git-graph-lane-2: var(--git-graph-lane-2);
+  --color-git-graph-lane-3: var(--git-graph-lane-3);
+  --color-git-graph-lane-4: var(--git-graph-lane-4);
+  --color-git-graph-lane-5: var(--git-graph-lane-5);
+  --color-annotation-highlight: var(--annotation-highlight);
+  --color-editor-surface: var(--editor-surface);
+  --shadow-floating: 0 10px 24px rgb(0 0 0 / 0.18);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+/* ── Light Mode ──────────────────────────────────────── */
+
+:root {
+  --app-font-family: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-sans: var(--app-font-family);
+  --font-mono:
+    'SF Mono', SFMono-Regular, ui-monospace, 'Cascadia Code', Menlo, Consolas, 'Liberation Mono',
+    monospace;
+  --radius: 0.625rem;
+  --orca-security-background: #fff;
+  --orca-security-foreground: #0a0a0a;
+  --orca-security-card: #fff;
+  --orca-security-card-foreground: #0a0a0a;
+  --orca-security-popover: #fff;
+  --orca-security-popover-foreground: #0a0a0a;
+  --orca-security-primary: #171717;
+  --orca-security-primary-foreground: #fafafa;
+  --orca-security-secondary: #f5f5f5;
+  --orca-security-secondary-foreground: #171717;
+  --orca-security-muted: #f5f5f5;
+  --orca-security-muted-foreground: #737373;
+  --orca-security-accent: #f5f5f5;
+  --orca-security-accent-foreground: #171717;
+  --orca-security-border: #e5e5e5;
+  --orca-security-input: #e5e5e5;
+  --orca-security-ring: #a1a1a1;
+  --background: #fff;
+  --editor-surface: #ffffff;
+  --foreground: #0a0a0a;
+  --card: #fff;
+  --card-foreground: #0a0a0a;
+  --popover: #fff;
+  --popover-foreground: #0a0a0a;
+  --primary: #171717;
+  --primary-foreground: #fafafa;
+  --secondary: #f5f5f5;
+  --secondary-foreground: #171717;
+  --muted: #f5f5f5;
+  --muted-foreground: #737373;
+  --accent: #f5f5f5;
+  --accent-foreground: #171717;
+  --destructive: #e40014;
+  --destructive-foreground: #fcf3f3;
+  --border: #e5e5e5;
+  --input: #e5e5e5;
+  --ring: #a1a1a1;
+  --terminal-pane-locate: var(--color-blue-600);
+  --ai-action-accent: var(--color-violet-500);
+  /* "An agent is asking you something" — one hue for every surface that shows
+     it (sidebar, tabs, dashboard, agent map). Orange, not amber: on the map it
+     has to stay separable from working-yellow at a glance. */
+  --agent-question: var(--color-orange-600);
+  /* Legible weight for text/glyphs on a tinted --agent-question surface. */
+  --agent-question-text: var(--color-orange-700);
+  --status-success: #15803d;
+  --status-success-background: color-mix(in srgb, var(--status-success) 10%, transparent);
+  --status-success-border: color-mix(in srgb, var(--status-success) 25%, transparent);
+  /* Workspace PR-state tones: same hue in both themes so a status keeps its
+     identity when the theme flips. */
+  --workspace-status-done: #c7a594;
+  --workspace-status-review: #16a34a;
+  --workspace-status-progress: #d4a300;
+  --chart-1: var(--color-blue-300);
+  --chart-2: var(--color-blue-500);
+  --chart-3: var(--color-blue-600);
+  --chart-4: var(--color-blue-700);
+  --chart-5: var(--color-blue-800);
+  --worktree-sidebar: #f5f5f5;
+  --worktree-sidebar-foreground: #0a0a0a;
+  --worktree-sidebar-accent: #eaeaea;
+  --worktree-sidebar-accent-foreground: #171717;
+  --worktree-sidebar-border: #e5e5e5;
+  --worktree-sidebar-ring: #a1a1a1;
+  --sidebar: #fafafa;
+  --sidebar-foreground: #0a0a0a;
+  --sidebar-primary: #171717;
+  --sidebar-primary-foreground: #fafafa;
+  --sidebar-accent: #f5f5f5;
+  --sidebar-accent-foreground: #171717;
+  --sidebar-border: #e5e5e5;
+  --sidebar-ring: #a1a1a1;
+  --terminal-pane-title-on-dark-fg: rgb(255 255 255 / 0.52);
+  --terminal-pane-title-on-dark-input-fg: rgb(255 255 255 / 0.7);
+  --terminal-pane-title-on-dark-placeholder: rgb(255 255 255 / 0.38);
+  --terminal-pane-title-on-dark-button-fg: rgb(255 255 255);
+  --terminal-pane-title-on-dark-button-hover-fg: rgb(255 255 255);
+  --terminal-pane-title-on-dark-input-bg: rgb(255 255 255 / 0.04);
+  --terminal-pane-title-on-dark-separator: rgb(255 255 255 / 0.06);
+  --terminal-pane-title-on-light-fg: rgb(24 24 27 / 0.64);
+  --terminal-pane-title-on-light-input-fg: rgb(24 24 27 / 0.82);
+  --terminal-pane-title-on-light-placeholder: rgb(24 24 27 / 0.48);
+  --terminal-pane-title-on-light-button-fg: rgb(24 24 27);
+  --terminal-pane-title-on-light-button-hover-fg: rgb(24 24 27);
+  --terminal-pane-title-on-light-input-bg: rgb(24 24 27 / 0.05);
+  --terminal-pane-title-on-light-separator: rgb(24 24 27 / 0.1);
+  --git-decoration-added: #587c0c;
+  --git-decoration-modified: #895503;
+  --git-decoration-deleted: #ad0707;
+  --git-decoration-renamed: #007acc;
+  --git-decoration-untracked: #007100;
+  --git-decoration-copied: #007acc;
+  --git-decoration-ignored: #8c8c8c;
+  --git-graph-ref: #007acc;
+  --git-graph-remote-ref: #b66dff;
+  --git-graph-base-ref: #ea5c00;
+  --git-graph-lane-1: #ffb000;
+  --git-graph-lane-2: #dc267f;
+  --git-graph-lane-3: #994f00;
+  --git-graph-lane-4: #40b0a6;
+  --git-graph-lane-5: #b66dff;
+  --annotation-highlight: #f59e0b;
+  --markdown-search-match: #facc15;
+  --markdown-search-match-active: #fb923c;
+  /* Why: tab-group splits use a dedicated divider — `--border` is too faint on
+     card/editor surfaces when panes are side-by-side or stacked. Default must
+     meet >=3:1 against `--card`, not only the hover/drag strong state. */
+  --tab-group-split-divider: #868690;
+  --tab-group-split-divider-strong: #71717a;
+  /* Drogon alias: shell/status-bar sections below style the titlebar strip with
+     --bg-titlebar; point it at the source card token instead of renaming those
+     sections. */
+  --bg-titlebar: var(--card);
+}
+
+/* ── Dark Mode ───────────────────────────────────────── */
+
+.dark {
+  --orca-security-background: #0a0a0a;
+  --orca-security-foreground: #fafafa;
+  --orca-security-card: #171717;
+  --orca-security-card-foreground: #fafafa;
+  --orca-security-popover: #171717;
+  --orca-security-popover-foreground: #fafafa;
+  --orca-security-primary: #e5e5e5;
+  --orca-security-primary-foreground: #171717;
+  --orca-security-secondary: #262626;
+  --orca-security-secondary-foreground: #fafafa;
+  --orca-security-muted: #262626;
+  --orca-security-muted-foreground: #a1a1a1;
+  --orca-security-accent: #404040;
+  --orca-security-accent-foreground: #fafafa;
+  --orca-security-border: rgb(255 255 255 / 0.07);
+  --orca-security-input: rgb(255 255 255 / 0.15);
+  --orca-security-ring: #737373;
+  --background: #0a0a0a;
+  --editor-surface: #1e1e1e;
+  --foreground: #fafafa;
+  --card: #171717;
+  --card-foreground: #fafafa;
+  --popover: #171717;
+  --popover-foreground: #fafafa;
+  --primary: #e5e5e5;
+  --primary-foreground: #171717;
+  --secondary: #262626;
+  --secondary-foreground: #fafafa;
+  --muted: #262626;
+  --muted-foreground: #a1a1a1;
+  --accent: #404040;
+  --accent-foreground: #fafafa;
+  --destructive: #ff6568;
+  --destructive-foreground: #df2225;
+  --border: rgb(255 255 255 / 0.07);
+  --input: rgb(255 255 255 / 0.15);
+  --ring: #737373;
+  --terminal-pane-locate: var(--color-blue-400);
+  --ai-action-accent: var(--color-violet-400);
+  --agent-question: var(--color-orange-500);
+  --agent-question-text: var(--color-orange-300);
+  --status-success: #86efac;
+  --status-success-background: color-mix(in srgb, var(--status-success) 10%, transparent);
+  --status-success-border: color-mix(in srgb, var(--status-success) 25%, transparent);
+  --workspace-status-done: #c7a594;
+  --workspace-status-review: #16a34a;
+  --workspace-status-progress: #d4a300;
+  --chart-1: var(--color-blue-300);
+  --chart-2: var(--color-blue-500);
+  --chart-3: var(--color-blue-600);
+  --chart-4: var(--color-blue-700);
+  --chart-5: var(--color-blue-800);
+  /* Why: light mode sets worktree-sidebar to secondary (#f5f5f5); mirror that
+     lift in dark mode so the panel reads clearly above #0a0a0a canvas. */
+  --worktree-sidebar: #2a2a2a;
+  --worktree-sidebar-foreground: #fafafa;
+  --worktree-sidebar-accent: #353535;
+  --worktree-sidebar-accent-foreground: #fafafa;
+  /* Match --border / --sidebar-border (7%) so the left sidebar's divider lines
+     aren't brighter than the rest of the UI in dark mode (#5906). */
+  --worktree-sidebar-border: rgb(255 255 255 / 0.07);
+  --worktree-sidebar-ring: #737373;
+  --sidebar: #171717;
+  --sidebar-foreground: #fafafa;
+  --sidebar-primary: #1447e6;
+  --sidebar-primary-foreground: #fafafa;
+  --sidebar-accent: #262626;
+  --sidebar-accent-foreground: #fafafa;
+  --sidebar-border: rgb(255 255 255 / 0.07);
+  --sidebar-ring: #525252;
+  --terminal-pane-title-on-dark-fg: rgb(255 255 255 / 0.52);
+  --terminal-pane-title-on-dark-input-fg: rgb(255 255 255 / 0.7);
+  --terminal-pane-title-on-dark-placeholder: rgb(255 255 255 / 0.38);
+  --terminal-pane-title-on-dark-button-fg: rgb(255 255 255);
+  --terminal-pane-title-on-dark-button-hover-fg: rgb(255 255 255);
+  --terminal-pane-title-on-dark-input-bg: rgb(255 255 255 / 0.04);
+  --terminal-pane-title-on-dark-separator: rgb(255 255 255 / 0.06);
+  --terminal-pane-title-on-light-fg: rgb(24 24 27 / 0.64);
+  --terminal-pane-title-on-light-input-fg: rgb(24 24 27 / 0.82);
+  --terminal-pane-title-on-light-placeholder: rgb(24 24 27 / 0.48);
+  --terminal-pane-title-on-light-button-fg: rgb(24 24 27);
+  --terminal-pane-title-on-light-button-hover-fg: rgb(24 24 27);
+  --terminal-pane-title-on-light-input-bg: rgb(24 24 27 / 0.05);
+  --terminal-pane-title-on-light-separator: rgb(24 24 27 / 0.1);
+  --git-decoration-added: #81b88b;
+  --git-decoration-modified: #e2c08d;
+  --git-decoration-deleted: #c74e39;
+  --git-decoration-renamed: #73c991;
+  --git-decoration-untracked: #73c991;
+  --git-decoration-copied: #73c991;
+  --git-decoration-ignored: #6e6e6e;
+  --git-graph-ref: #3794ff;
+  --git-graph-remote-ref: #b66dff;
+  --git-graph-base-ref: #ea5c00;
+  --git-graph-lane-1: #ffb000;
+  --git-graph-lane-2: #dc267f;
+  --git-graph-lane-3: #ce9178;
+  --git-graph-lane-4: #40b0a6;
+  --git-graph-lane-5: #b66dff;
+  --annotation-highlight: #fbbf24;
+  --markdown-search-match: #facc15;
+  --markdown-search-match-active: #fb923c;
+  /* Brighter than terminal defaults so the always-visible line clears 3:1 on `--card`. */
+  --tab-group-split-divider: #71717a;
+  --tab-group-split-divider-strong: #a1a1aa;
+}
+
+/* ── Base Layer ──────────────────────────────────────── */
+
+@layer base {
+  *,
+  *::before,
+  *::after {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    /* Why: mobile browser chrome changes the visible viewport while open. */
+    height: 100dvh;
+    font-family: var(
+      --app-font-family,
+      'Geist',
+      -apple-system,
+      BlinkMacSystemFont,
+      'Segoe UI',
+      sans-serif
+    );
+    letter-spacing: 0.01em;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ul {
+    list-style: none;
+  }
+
+  :where(button:not(:disabled)) {
+    cursor: pointer;
+  }
+
+  :where(button:disabled) {
+    cursor: default;
+  }
+}
+
+/* Source Layout rule (same file): the shell mounts into a fixed-size root that
+   clips, exactly like the reference renderer. */
+#root {
+  height: 100dvh;
+  width: 100vw;
+  overflow: hidden;
+}
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+.app-content {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+/* R6-A titlebar (Orca port, MIT Copyright (c) 2026 Lovecast Inc.):
+   36px strip above the content row; buttons opt out of the drag region. */
+.titlebar {
+  height: 36px;
+  min-height: 36px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  background: var(--bg-titlebar, var(--card));
+  border-bottom: 1px solid var(--border);
+  -webkit-app-region: drag;
+  user-select: none;
+  flex-shrink: 0;
+}
+.titlebar-traffic-light-pad {
+  width: calc(80px / var(--ui-zoom-factor, 1));
+  flex-shrink: 0;
+}
+.titlebar-app-name {
+  -webkit-app-region: no-drag;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 24px;
+  max-width: min(280px, 32vw);
+  padding: 0 4px 0 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--foreground);
+  overflow: hidden;
+  white-space: nowrap;
+}
+.titlebar-app-name-main {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sidebar-toggle {
+  -webkit-app-region: no-drag;
+  background: none;
+  border: none;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  padding: 4px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background 150ms;
+}
+.sidebar-toggle:hover {
+  background: var(--accent);
+  color: var(--foreground);
+}
+.sidebar-toggle-compact {
+  padding: 4px 5px;
+  color: var(--foreground);
+}
+.sidebar-toggle-compact:disabled {
+  color: var(--muted-foreground);
+}
+.sidebar-toggle:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+.sidebar-toggle:disabled:hover {
+  background: none;
+  color: var(--muted-foreground);
+}
+.workspace-sidebar {
+  flex-shrink: 0;
+  /* #124: the sidebar paints the worktree-sidebar token (source
+     sidebar/index.tsx bg-worktree-sidebar), not the app --sidebar token. */
+  background: var(--worktree-sidebar);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+}
+.brand {
+  height: 56px;
+  padding: 18px 20px;
+  font-weight: 600;
+  border-bottom: 1px solid var(--border);
+}
+.sidebar-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 20px 12px 8px 20px;
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+.workspace-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: calc(100% - 16px);
+  margin: 2px 8px;
+  padding: 8px 12px;
+  border-radius: calc(var(--radius) * 0.8);
+  text-align: left;
+  cursor: pointer;
+  font-size: 13px;
+}
+.workspace-row span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.workspace-row svg {
+  flex-shrink: 0;
+}
+.workspace-row:hover,
+.workspace-row[data-current="true"] {
+  background: var(--sidebar-accent);
+}
+.sidebar-empty {
+  margin: 12px 20px;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.sidebar-footer {
+  margin-top: auto;
+  padding: 16px 20px;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--muted-foreground);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+.build-revision {
+  background: var(--popover);
+  color: var(--popover-foreground);
+  border-radius: calc(var(--radius) * 0.6);
+  padding: 3px 8px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+.form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.session-area {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.session-header {
+  min-height: 56px;
+  padding: 8px 16px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+}
+.workspace-heading {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+/* Long unbreakable repo names must ellipsize like the path below them, never
+   paint under the header action buttons at narrow widths. */
+.workspace-heading strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.workspace-heading .path {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.path {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--muted-foreground);
+  overflow-wrap: anywhere;
+}
+.header-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 4px;
+}
+.session-layout {
+  position: relative;
+  display: flex;
+  min-height: 0;
+  flex: 1;
+}
+.terminal-column {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+.active-session-panel {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+}
+/* R6-B tab strip (Orca port, MIT Copyright (c) 2026 Lovecast Inc.): tab
+   chrome rides Tailwind classes from tab-chrome.ts; only the native
+   scrollbar suppression lives here, verbatim from the source
+   (terminal-tab-strip recipe). */
+/* Why: horizontal tab strips scroll via pointer and keyboard; a native
+   scrollbar thumb overlays tab labels and looks broken. */
+.terminal-tab-strip {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.terminal-tab-strip::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+/* Same suppression for the Mentu recipe surface's view tabs, which scroll
+   horizontally when the main column is too narrow to fit all four labels
+   (keeps the surface inside its own column instead of painting under the
+   right sidebar). */
+.recipe-pane-view-tabs {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.recipe-pane-view-tabs::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+/* R6-B "+" static create menu rows (tab-bar-static-create-menu recipe:
+   icon + label + trailing hint). Radix renders the items unstyled, so the
+   flex row and the muted trailing hint live here. */
+.tab-create-item {
+  display: flex;
+  align-items: center;
+}
+.tab-create-item[data-highlighted] {
+  background: var(--accent);
+  color: var(--accent-foreground);
+  outline: none;
+}
+.tab-create-item[data-disabled] {
+  color: var(--muted-foreground);
+  cursor: default;
+}
+.tab-create-hint {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--muted-foreground);
+}
+.tab-create-shortcut {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+.terminal-surface {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  padding: 12px 4px 4px 12px;
+}
+.terminal-surface .xterm {
+  height: 100%;
+}
+.empty-state {
+  margin: auto;
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 16px;
+  max-width: 480px;
+}
+.empty-state > svg {
+  color: var(--muted-foreground);
+}
+.empty-state h1 {
+  font-size: 18px;
+  font-weight: 600;
+}
+.empty-state p {
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--muted-foreground);
+  text-wrap: pretty;
+}
+.session-details {
+  width: 250px;
+  flex-shrink: 0;
+  padding: 20px 16px;
+  border-left: 1px solid var(--border);
+  overflow: auto;
+}
+.session-details h2 {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+.session-details dt {
+  color: var(--muted-foreground);
+  font-size: 12px;
+  margin-top: 20px;
+}
+.session-details dd {
+  margin-top: 4px;
+  font-size: 12px;
+}
+.session-details p {
+  color: var(--muted-foreground);
+  font-size: 12px;
+  line-height: 1.7;
+}
+/* R6-B right sidebar host (Orca port, MIT Copyright (c) 2026 Lovecast
+   Inc.): header drag-region recipes verbatim from the source; the host
+   only toggles panel display — mount lifetime (keep-alive) stays in App.
+   The session-details pane fills the host (the fixed width and divider
+   belonged to the retired inspector aside). */
+.right-sidebar-header-drag {
+  -webkit-app-region: drag;
+  user-select: none;
+}
+.right-sidebar-header-no-drag {
+  -webkit-app-region: no-drag;
+}
+/* Why: the right sidebar header extends to the window's right edge, so we
+   reserve the width of the window-controls overlay (0 without custom
+   desktop chrome) to keep the close button reachable. */
+.right-sidebar-header-inset {
+  padding-right: var(--window-controls-width, 0px);
+}
+.right-sidebar-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+.right-sidebar-panel .session-details {
+  width: auto;
+  flex: 1;
+  border-left: none;
+}
+.migration-note {
+  margin-top: 32px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+.error-banner {
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.error-banner span {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--destructive);
+  max-width: 75ch;
+}
+.tooltip {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border-radius: calc(var(--radius) * 0.8);
+  padding: 6px 10px;
+  font-size: 12px;
+  z-index: 10;
+}
+.harness-menu {
+  min-width: 200px;
+  background: var(--background);
+  border-radius: calc(var(--radius) * 0.8);
+  box-shadow: var(--shadow-floating);
+  padding: 4px;
+  z-index: 10;
+}
+.harness-menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: calc(var(--radius) * 0.6);
+  font-size: 13px;
+  cursor: pointer;
+  outline: none;
+}
+.harness-menu-item[data-highlighted] {
+  background: var(--accent);
+  color: var(--accent-foreground);
+  /* --accent is nearly indistinguishable from --background in light mode;
+     an inset ring keeps the keyboard-highlighted row visible on its own. */
+  outline: 1px solid var(--ring);
+  outline-offset: -1px;
+}
+.harness-menu-item[data-disabled] {
+  color: var(--muted-foreground);
+  cursor: default;
+}
+.harness-menu-hint {
+  font-size: 11px;
+  color: var(--muted-foreground);
+}
+.harness-menu-separator {
+  height: 1px;
+  margin: 4px 2px;
+  background: var(--border);
+}
+.harness-launch-form {
+  width: 280px;
+  background: var(--background);
+  border-radius: calc(var(--radius) * 0.8);
+  box-shadow: var(--shadow-floating);
+  padding: 14px;
+  z-index: 10;
+}
+.harness-launch-form form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.harness-launch-form h2 {
+  font-size: 13px;
+  font-weight: 600;
+}
+.harness-launch-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+.harness-advanced {
+  font-size: 12px;
+}
+.harness-advanced summary {
+  cursor: pointer;
+  color: var(--muted-foreground);
+  margin-bottom: 8px;
+}
+.harness-advanced label {
+  margin-top: 8px;
+}
+.harness-checkbox {
+  flex-direction: row !important;
+  align-items: center;
+  gap: 6px !important;
+}
+/* R16-A (fixes #133): the Files panel is Explorer-tree-only now — the
+   embedded editor moved to the main tab group's EditorHost, so this is a
+   single-child column host, not the old tree-beside-editor split row. */
+.files-panel {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  /* Anchor for the transient notice overlays below. */
+  position: relative;
+}
+.workspace-explorer {
+  width: 240px;
+  flex-shrink: 0;
+  min-height: 0;
+  overflow: auto;
+  border-right: 1px solid
+    color-mix(in srgb, var(--border) 72%, transparent);
+}
+.editor-pane {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--editor-surface);
+}
+.editor-pane-header {
+  min-height: 36px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  background: var(--editor-surface);
+  border-bottom: 1px solid
+    color-mix(in srgb, var(--border) 72%, transparent);
+}
+/* MIT Copyright (c) 2026 Lovecast Inc. Ported from Orca's
+   src/renderer/src/assets/main.css (.editor-header* block): the editor
+   header's file-path button (click-to-copy) plus the "copied" toast.
+   The header container itself stays this build's own .editor-pane-header
+   above; only the genuinely new chrome is ported. */
+.editor-header-text {
+  min-width: 0;
+  flex: 1;
+}
+.editor-header-path {
+  display: block;
+  min-width: 0;
+  flex: 0 1 auto;
+  padding: 0;
+  max-width: 100%;
+  border: none;
+  background: transparent;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1.2;
+  font-family:
+    ui-monospace,
+    SFMono-Regular,
+    SF Mono,
+    Menlo,
+    Consolas,
+    monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: left;
+}
+.editor-header-path:hover,
+.editor-header-path:focus-visible {
+  color: var(--foreground);
+}
+.editor-header-path-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.editor-header-copy-toast {
+  opacity: 0;
+  transform: translateY(2px);
+  transition:
+    opacity 120ms ease,
+    transform 120ms ease;
+  pointer-events: none;
+  flex-shrink: 0;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 72%, transparent);
+  color: var(--foreground);
+  font-size: 11px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.editor-header-copy-toast.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+/* Editor canvas surface (ROOT-approved extras to Follow-up B): the emitted
+   textarea fills the pane column on --editor-surface in the mono scale. No
+   native resize grip may overflow the flex column, so resizing is off; the
+   focus ring mirrors the button pattern. */
+.editor-pane-surface {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px 14px;
+  border: 0;
+  resize: none;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--foreground);
+  background: var(--editor-surface);
+}
+.editor-pane-surface:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+}
+/* Explorer tree rows (Follow-up B item 5 + approval): the emitted buttons
+   are vertical full-width flex rows mirroring .workspace-row, so selected
+   and hover reuse --sidebar-accent and the global button focus ring stays
+   intact. The chevron spacer matches the 14px lucide chevron it replaces. */
+.workspace-explorer-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: calc(100% - 16px);
+  margin: 2px 8px;
+  padding: 8px 12px;
+  border-radius: calc(var(--radius) * 0.8);
+  text-align: left;
+  cursor: pointer;
+  font-size: 13px;
+}
+.workspace-explorer-row svg,
+.workspace-explorer-chevron-spacer,
+.workspace-explorer-badge {
+  flex-shrink: 0;
+}
+.workspace-explorer-chevron-spacer {
+  width: 14px;
+}
+.workspace-explorer-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.workspace-explorer-badge {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+.workspace-explorer-row:hover,
+.workspace-explorer-row[data-current="true"],
+.workspace-explorer-row[aria-selected="true"] {
+  background: var(--sidebar-accent);
+}
+/* Header badges stay V2-styled via existing hooks; content is V3's. */
+.editor-pane-unread {
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+.editor-pane-dirty {
+  font-size: 12px;
+}
+/* Truncation/symlink notices are transient siblings between the tree and
+   the editor: as flex items they would become columns squeezing the editor,
+   so they overlay the panel top instead (popover tokens, floating tier).
+   A V3 wrapper stacking them above the split remains the cleaner option. */
+.files-panel-truncated,
+.files-panel-selection {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  max-width: min(90%, 60ch);
+  margin: 0;
+  padding: 6px 10px;
+  font-size: 12px;
+  background: var(--popover);
+  color: var(--popover-foreground);
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) * 0.8);
+  box-shadow: var(--shadow-floating);
+}
+.files-panel-symlink-badge {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  background: var(--popover);
+  color: var(--popover-foreground);
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) * 0.6);
+  padding: 3px 8px;
+}
+/* R6-B: the session-details overlay recipe is retired with the inspector
+   aside — the panel now lives in the right sidebar host below. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* ── Command palette + quick open (Cmd+K / Cmd+P) ─────────────────── */
+/* Selected-row recipe ported from the read-only reference
+ * the read-only Orca reference `src/renderer/src/assets/main.css`
+ * (`.jump-palette-item[data-selected='true']`), MIT Copyright (c) 2026
+ * Lovecast Inc. Class names adapted to this repo's palette; tokens are the
+ * monochrome system already defined above. */
+
+.command-palette-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: 12vh;
+  background: rgb(0 0 0 / 0.32);
+}
+
+.command-palette {
+  width: min(640px, calc(100vw - 48px));
+  max-height: min(480px, calc(100vh - 20vh));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--popover);
+  color: var(--popover-foreground);
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) * 0.8);
+  box-shadow: var(--shadow-floating);
+}
+
+.command-palette-input {
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  padding: 12px 16px;
+  outline: none;
+}
+
+.command-palette-input::placeholder {
+  color: var(--muted-foreground);
+}
+
+.command-palette-list {
+  overflow-y: auto;
+  padding: 6px;
+  outline: none;
+}
+
+.command-palette-section {
+  padding: 2px 0 6px;
+}
+
+.command-palette [cmdk-group-heading] {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted-foreground);
+  padding: 8px 10px 4px;
+}
+
+.command-palette-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 7px 10px;
+  border: 1px solid transparent;
+  border-radius: calc(var(--radius) * 0.6);
+  font-size: 13px;
+  line-height: 1.35;
+  cursor: default;
+}
+
+.command-palette-row[aria-disabled="true"] {
+  opacity: 1;
+  cursor: not-allowed;
+}
+
+/* Why the flat-background override: --accent on the popover surface is nearly
+   invisible in light mode — the keyboard cursor reads as a solid row by mixing
+   foreground into background with an inset ring. The [role='option'] arm covers
+   rows rendered outside cmdk. */
+.jump-palette-item[data-selected="true"],
+.jump-palette-item[aria-selected="true"],
+[role="option"].jump-palette-item[data-selected="true"] {
+  --jump-palette-selection-surface: color-mix(in srgb, var(--foreground) 12%, var(--background));
+  background: var(--jump-palette-selection-surface);
+  border-color: transparent;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--foreground) 18%, transparent);
+  color: var(--foreground);
+}
+
+.dark .jump-palette-item[data-selected="true"],
+.dark .jump-palette-item[aria-selected="true"],
+.dark [role="option"].jump-palette-item[data-selected="true"] {
+  /* Why accent, not the light-mode mix: --accent already reads clearly on dark
+     surfaces; a low-%% foreground mix would be a visible step down. */
+  --jump-palette-selection-surface: var(--accent);
+  background: var(--jump-palette-selection-surface);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--foreground) 16%, transparent);
+  color: var(--accent-foreground);
+}
+
+.command-palette-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.command-palette-path {
+  margin-left: auto;
+  flex-shrink: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+
+.command-palette-hint {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--muted-foreground);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0 6px;
+}
+
+.command-palette-badge {
+  font-size: 11px;
+  color: var(--muted-foreground);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0 7px;
+}
+
+.command-palette-disabled-reason {
+  margin-left: auto;
+  text-align: right;
+  font-size: 12px;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.command-palette-empty {
+  padding: 20px 16px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--muted-foreground);
+}
+
+.command-palette-overflow {
+  padding: 6px 10px;
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+
+.command-palette-footer {
+  display: flex;
+  gap: 14px;
+  padding: 8px 16px;
+  border-top: 1px solid var(--border);
+  font-size: 11px;
+  color: var(--muted-foreground);
+}
+/* R1-A bottom status bar (journey J12). Monochrome tokens only; the bar is a
+   flex sibling under .app-shell, so #root stacks vertically. */
+#root {
+  display: flex;
+  flex-direction: column;
+}
+.app-shell {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: auto;
+}
+/* R6-A: the status-bar container now uses the source's exact Tailwind class
+   list (h-6/min-h-[24px]) in StatusBar.tsx; below are only the inner
+   segment recipes. */
+.status-bar-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.status-bar-meters {
+  gap: 14px;
+}
+.status-bar-spacer {
+  flex: 1;
+}
+.status-bar-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  border-radius: 4px;
+  color: var(--muted-foreground);
+  cursor: pointer;
+}
+.status-bar-icon-button:hover:not(:disabled) {
+  background: var(--sidebar-accent);
+  color: var(--foreground);
+}
+.status-bar-icon-button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.status-bar-icon {
+  display: inline-flex;
+  align-items: center;
+}
+.status-bar-provider {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.status-bar-name {
+  font-weight: 600;
+  color: var(--muted-foreground);
+}
+.status-bar-meter {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.status-bar-track {
+  width: 44px;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 9999px;
+  background: var(--sidebar-accent);
+}
+.status-bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: 9999px;
+}
+/* Urgency fills mirror Orca's 60/80 bar bands; fixed hues (not theme tokens)
+   because they signal consumption urgency, exactly like the reference. */
+.status-bar-fill-low {
+  background: color-mix(in srgb, var(--muted-foreground) 40%, transparent);
+}
+.status-bar-fill-mid {
+  background: #eab308;
+}
+.status-bar-fill-high {
+  background: #ef4444;
+}
+.status-bar-meter-label {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.status-bar-unavailable {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.status-bar-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 4px;
+  border-radius: 4px;
+  font-weight: 600;
+  color: var(--muted-foreground);
+  cursor: pointer;
+}
+.status-bar-toggle:hover:not(:disabled) {
+  background: var(--sidebar-accent);
+  color: var(--foreground);
+}
+.status-bar-toggle:disabled {
+  cursor: default;
+}
+.status-bar-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--muted-foreground) 40%, transparent);
+}
+.status-bar-dot-active {
+  background: var(--foreground);
+}
+.status-bar-segment {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+/* R16-AG2 (#209, fork StatusBarSurface narrow tiers): clip paint during the
+   resize round-trip before the ResizeObserver collapse lands. The collapse
+   tiers guarantee content fits in steady state, so this never clips text —
+   and scrollWidth still reports honestly, so the sealed overflow probe
+   cannot be fooled by it. */
+footer[data-testid="status-bar"] {
+  overflow: hidden;
+}
+
+/* Shell (R2-A, Orca port, MIT Copyright (c) 2026 Lovecast Inc.): sidebar
+   nav rows reuse .workspace-row; below are the project/worktree card,
+   agent-state and footer recipes. Tokens are this repo's monochrome
+   system (--sidebar/--border/--accent), so dark/light follow the theme. */
+.shell-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5px;
+  padding: 8px 0 4px;
+}
+.shell-coming-soon {
+  margin: 8px 20px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--muted-foreground);
+}
+.shell-sidebar-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+.shell-projects {
+  padding-bottom: 8px;
+}
+.shell-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 12px 12px 8px 20px;
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+.shell-section-actions {
+  display: flex;
+  gap: 2px;
+}
+.shell-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: calc(var(--radius) * 0.6);
+  color: var(--muted-foreground);
+  cursor: pointer;
+}
+.shell-icon-button:hover:not(:disabled) {
+  background: var(--sidebar-accent);
+  color: var(--foreground);
+}
+.shell-icon-button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.shell-filter-input {
+  width: calc(100% - 24px);
+  margin: 0 12px 8px;
+  padding: 6px 10px;
+  font-size: 12px;
+  color: var(--foreground);
+  background: var(--background);
+  border: 1px solid var(--input);
+  border-radius: calc(var(--radius) * 0.6);
+}
+.shell-project {
+  margin-bottom: 4px;
+}
+/* Project header row: the fork's SectionHeader chrome (h-7 row, 10px
+   leading indent like WORKTREE_SECTION_HEADER_PADDING_LEFT, gap-1.5,
+   pr-2, 13px semibold label, size-4 icon box). */
+.shell-project-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  margin: 0;
+  padding: 0 8px 0 10px;
+  text-align: left;
+  color: var(--foreground);
+  cursor: pointer;
+}
+.shell-project-row:focus-visible {
+  outline: none;
+  border-radius: calc(var(--radius) * 0.6);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ring) 60%, transparent);
+}
+.shell-project-row svg {
+  flex-shrink: 0;
+}
+.shell-project-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+}
+/* Cards sit inside the section with no extra container padding: each
+   card carries the fork's surface inset (ml-1) and flush content
+   padding (16px at depth 0) itself. */
+.shell-project-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0;
+}
+.shell-worktree-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  /* The fork's card surface: pt-1.25 pb-1.5 pr-1.5 ml-1 rounded-lg, with
+     the flush content pullback (16px) as the left padding. */
+  margin-left: 4px;
+  width: calc(100% - 4px);
+  padding: 5px 6px 6px 16px;
+  text-align: left;
+  cursor: pointer;
+  font-size: 13px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 0.5rem;
+  outline: none;
+  user-select: none;
+  transition:
+    background-color 200ms,
+    border-color 200ms,
+    opacity 200ms,
+    box-shadow 200ms;
+}
+/* The fork's worktree-sidebar-card-hover: light mixes sidebar-foreground
+   4%; dark uses the sidebar accent (which is nearly the surface, so the
+   mix needs the larger share to read). */
+.shell-worktree-card:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--foreground) 4%, transparent);
+}
+.dark .shell-worktree-card:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--worktree-sidebar-accent) 40%, transparent);
+}
+/* Workspace options "Card layout: Compact" (workspace-options-state.ts) --
+   density only, no structural change: WorktreeCard's own markup/tests are
+   untouched, this wrapper class just tightens the card's own padding/gap. */
+.shell-workspace-card-compact .shell-worktree-card {
+  padding: 3px 6px 4px 16px;
+  gap: 2px;
+}
+/* Selected card: the fork's exact active recipe
+   ([data-worktree-card-surface][data-worktree-card-active='primary'] in the
+   reference main.css) over the sidebar's own tokens — a rounded border
+   around the WHOLE card, a translucent wash and a 1px shadow. The previous
+   rule mixed the app `--border`/`--foreground` tokens instead of
+   `--worktree-sidebar-border`/`--worktree-sidebar-foreground`, which is why
+   the outline read as almost invisible. */
+.shell-worktree-card[data-active="true"] {
+  border-color: color-mix(
+    in srgb,
+    var(--worktree-sidebar-border) 40%,
+    transparent
+  );
+  background: color-mix(
+    in srgb,
+    var(--worktree-sidebar-foreground) 8%,
+    transparent
+  );
+  box-shadow: 0 1px 2px
+    color-mix(in srgb, var(--worktree-sidebar-foreground) 4%, transparent);
+}
+.dark .shell-worktree-card[data-active="true"] {
+  border-color: color-mix(
+    in srgb,
+    var(--worktree-sidebar-foreground) 18%,
+    var(--worktree-sidebar-border)
+  );
+  background: color-mix(
+    in srgb,
+    var(--worktree-sidebar-foreground) 10%,
+    transparent
+  );
+  box-shadow: 0 1px 2px
+    color-mix(in srgb, var(--worktree-sidebar-foreground) 3%, transparent);
+}
+/* Multi-selection (Cmd/Ctrl+click, Shift+click): the selected cards carry
+   the sidebar ring on the same card outline the active card uses, so a
+   selection reads as one block without competing with the "this is the
+   open workspace" treatment above (a card can be both). Unselected cards
+   dim slightly while a selection is live, the way the sidebar already
+   dims filtered-out chrome. */
+.shell-worktree-card[data-multi-selected="true"] {
+  border-color: color-mix(
+    in srgb,
+    var(--worktree-sidebar-foreground) 45%,
+    transparent
+  );
+  background: color-mix(
+    in srgb,
+    var(--worktree-sidebar-foreground) 12%,
+    transparent
+  );
+  /* The inner hairline is what a selected card has and the open-workspace
+     card does not, so a card that is both still reads as selected. */
+  box-shadow: inset 0 0 0 1px
+    color-mix(in srgb, var(--worktree-sidebar-foreground) 20%, transparent);
+}
+.shell-worktree-card[data-multi-selected="false"] {
+  opacity: 0.72;
+}
+.shell-worktree-card:disabled {
+  cursor: default;
+}
+/* Bulk delete confirm: the target list scrolls instead of growing the
+   modal past the viewport when a large selection is being removed. */
+.shell-bulk-delete-target-list {
+  max-height: 168px;
+  overflow-y: auto;
+}
+.shell-bulk-delete-target-list ul {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+/* The per-workspace failure list in the same confirm: one readable line
+   per workspace that refused, under the shared error style. */
+.shell-bulk-delete-failures ul {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 4px;
+}
+/* Status lane (the fork's WorktreeCardStatusSlot column, owner's
+   vocabulary 2026-09-21): the workspace STATUS ring first (same icon and
+   colour the status carries on the board), then the one live activity glyph
+   that must never hide behind text — the working spinner, or the amber bell
+   while an agent waits for the user. */
+.shell-worktree-card-status-lane {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding-top: 2px;
+  min-height: 22px;
+}
+/* The status ring: the glyph is sized by its own svg, the box only holds it
+   on the ring's optical centre so a 20px ring lines up with the 13px
+   activity glyph beside it. */
+.shell-worktree-card-status-ring {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+}
+/* Agent-activity ring (owner's sidebar guideline): amber while an agent
+   works or waits, green when sessions are quiet, neutral with no session.
+   Solid, so it never reads as the dashed "no status" ring it replaced. */
+.shell-worktree-card-activity-ring {
+  display: inline-block;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  border-radius: 9999px;
+  border: 2.5px solid color-mix(in srgb, var(--muted-foreground) 55%, transparent);
+}
+.shell-worktree-card-activity-ring[data-worktree-activity="active"] {
+  border-color: #eab308;
+}
+.dark .shell-worktree-card-activity-ring[data-worktree-activity="active"] {
+  border-color: #facc15;
+}
+.shell-worktree-card-activity-ring[data-worktree-activity="quiet"] {
+  border-color: #16a34a;
+}
+.dark .shell-worktree-card-activity-ring[data-worktree-activity="quiet"] {
+  border-color: #4ade80;
+}
+/* Guideline: a hairline separates each top-level card; nested child cards
+   keep their indented guide instead. */
+.shell-project-cards > [data-worktree-nesting-depth="0"]:not(:first-child) {
+  border-top: 1px solid
+    color-mix(in srgb, var(--worktree-sidebar-border) 70%, transparent);
+  padding-top: 1px;
+}
+/* The card's fold chevron (owner's design): the leading affordance that
+   folds the whole agent list. Silence the card's own background/selection
+   so the 16px hit target reads as a control, not as card chrome. */
+.shell-worktree-card-fold {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-self: flex-start;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  margin-top: 3px;
+  border-radius: calc(var(--radius) * 0.4);
+  color: var(--muted-foreground);
+  cursor: pointer;
+}
+.shell-worktree-card-fold:hover:not(:disabled) {
+  color: var(--foreground);
+  background: color-mix(in srgb, var(--foreground) 6%, transparent);
+}
+.dark .shell-worktree-card-fold:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--worktree-sidebar-accent) 55%, transparent);
+}
+.shell-worktree-card-fold:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ring) 60%, transparent);
+}
+.shell-worktree-card-fold:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+/* Right-side card affordances (fork MetaIconBadge shell): terminal marker
+   and branch marker, ahead of the kebab. */
+.shell-worktree-card-affordances {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 4px;
+  padding-top: 1px;
+}
+/* Owner's guide: creator provenance (Drogon CLI / Automation) is a compact
+   secondary pill, never a full-strength line — the fact stays visible and
+   toggleable without repeating dominating metadata on every card. */
+.shell-worktree-card-provenance {
+  flex-shrink: 0;
+  font-size: 10px;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+  color: var(--muted-foreground);
+}
+.shell-worktree-card-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+/* The activity sentence (owner's design): one uppercase line under the card
+   title, the reference's DetailHeader recipe (11px semibold, 0.05em
+   tracking, uppercase) so it reads as the product's own metadata voice.
+   Owner's guide: the sentence carries a muted blue tint (checked ≥4.5:1 on
+   the sidebar surface in both themes) so activity reads apart from the
+   neutral metadata around it. */
+.shell-worktree-card-sentence {
+  display: block;
+  margin-top: 1px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  line-height: 1.2;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--muted-foreground) 55%, #3b62a8);
+}
+.dark .shell-worktree-card-sentence {
+  color: color-mix(in srgb, var(--muted-foreground) 55%, #8fb3e8);
+}
+.shell-worktree-card-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.shell-unread-dot {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #eab308;
+}
+.shell-worktree-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 11px;
+  line-height: 1;
+  color: var(--muted-foreground);
+}
+/* The fork's branch slot: plain 11px muted text (TruncatedSidebarLabel),
+   not mono and not iconed; badges sit right of it. */
+.shell-worktree-card-branch {
+  display: inline-block;
+  flex: 1 1 0%;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.shell-worktree-card-sessions,
+.shell-worktree-card-time {
+  flex-shrink: 0;
+  margin-left: auto;
+}
+.shell-worktree-card-branch + .shell-worktree-card-time {
+  margin-left: 0;
+}
+.shell-worktree-card-state {
+  font-size: 11px;
+  color: var(--muted-foreground);
+}
+/* Nested session rows (R16-AN, ported from the fork's .compact-agent-row /
+   .worktree-agent-row-hover rules in the reference main.css): one row per
+   session under the card summary line. Owner's guideline: rows stay flat;
+   the focused row is marked by its brighter text, not a filled pill. */
+.shell-worktree-card-main {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 6px;
+}
+.shell-worktree-card-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+/* R1 finisher: the tree is a full-width flex line of its own now, so the
+   fork's outdent into the card gutter is wrong here — it dragged the root
+   connectors off the card's left edge (measured at 280px: root indent 9px,
+   connector line at ~0px, clipped at the viewport edge). The list keeps the
+   card's own width; the nesting gutter lives on .shell-worktree-card-rows
+   below, where every connector stays inside the card. */
+[data-compact-agent-list="true"] {
+  margin-inline-start: 0;
+  width: 100%;
+}
+.worktree-agent-row-hover:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--foreground) 4%, transparent);
+}
+.worktree-agent-row-hover:disabled {
+  cursor: default;
+}
+/* Owner's design (2026-09-21): the row's trailing state — the shared dot
+   glyph (which carries the state's accessible label) plus the text that says
+   it in words. Present on every row, main rows included. */
+.shell-worktree-agent-state {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 4px;
+}
+.shell-worktree-agent-state-label {
+  font-size: 10px;
+  line-height: 1;
+  white-space: nowrap;
+  color: var(--muted-foreground);
+}
+/* Row width budget (owner's guide: the provider name stays readable at the
+   natural 280px sidebar width, MAIN sits outside truncation, every row keeps
+   its own state). Scoped to the worktree agent rows only — the chats list
+   reuses `.compact-agent-row` with its own single-line recipe and is
+   untouched. The identity group never shrinks: a short provider name always
+   reads whole, a long rename truncates inside the group with the full title
+   in the tooltip. The secondary rides flex-basis 0 so it collapses toward
+   nothing before anything else gives. The tail never shrinks: when even the
+   collapsed secondary leaves no room, the row wraps and the state rides a
+   second line, right-aligned, instead of eating the identity. */
+[data-worktree-agent-row] {
+  flex-wrap: wrap;
+}
+.shell-worktree-agent-identity {
+  display: inline-flex;
+  flex: 0 1 auto;
+  align-items: center;
+  min-width: 0;
+  max-width: 100%;
+}
+.shell-worktree-agent-primary {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.shell-worktree-agent-secondary {
+  flex: 1 1 0%;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.shell-worktree-agent-tail {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+/* A root row that owns subagents carries the badge; the guide's MAIN pill is
+   a quiet outline, never a solid chip, so it sits beside the row's name
+   without competing with the status ring above it. */
+.shell-worktree-agent-main-badge {
+  display: inline-block;
+  flex-shrink: 0;
+  margin-left: 6px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  border: 1px solid color-mix(in srgb, var(--foreground) 20%, transparent);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  line-height: 1.3;
+  text-transform: uppercase;
+  vertical-align: middle;
+  color: var(--muted-foreground);
+}
+.dark .shell-worktree-agent-main-badge {
+  border-color: color-mix(
+    in srgb,
+    var(--worktree-sidebar-foreground) 24%,
+    transparent
+  );
+}
+/* Subagent nesting box (issue #359, ported from the fork's
+   [data-compact-agent-list] overrides in the reference main.css): children
+   render in an indented group under the parent row; the parent row carries
+   the disclosure chevron. Compact expanded agents live inside an
+   already-framed worktree card — keep the tree legible with indentation and
+   interaction states instead of stacking row cards and shaded panels. */
+[data-compact-agent-list="true"] .worktree-agent-lineage-parent-row,
+[data-compact-agent-list="true"] .worktree-agent-lineage-child-row {
+  background: transparent;
+  box-shadow: none;
+}
+
+/* The lineage's connector lines (owner's design 2026-09-21): the tree draws
+   itself the way the guide does — a vertical guide along the left of the
+   group, and an elbow into every node. Each treeitem owns its own vertical
+   segment so the last one stops at its elbow (a real tree end) instead of
+   running past the final row. The line token is shared with the sidebar
+   stripes so it reads at the same weight in both themes. */
+[data-compact-agent-list="true"] {
+  --worktree-agent-tree-line: color-mix(
+    in srgb,
+    var(--foreground) 16%,
+    transparent
+  );
+}
+
+.dark [data-compact-agent-list="true"] {
+  --worktree-agent-tree-line: color-mix(
+    in srgb,
+    var(--worktree-sidebar-foreground) 14%,
+    var(--worktree-sidebar-border)
+  );
+}
+
+[data-compact-agent-list="true"] > [role="treeitem"],
+.worktree-agent-lineage-children > [role="treeitem"] {
+  position: relative;
+}
+
+[data-compact-agent-list="true"] > [role="treeitem"]::before,
+.worktree-agent-lineage-children > [role="treeitem"]::before {
+  content: "";
+  position: absolute;
+  left: -0.55rem;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--worktree-agent-tree-line);
+  pointer-events: none;
+}
+
+[data-compact-agent-list="true"] > [role="treeitem"]::after,
+.worktree-agent-lineage-children > [role="treeitem"]::after {
+  content: "";
+  position: absolute;
+  left: -0.55rem;
+  top: 50%;
+  width: 0.4rem;
+  height: 1px;
+  background: var(--worktree-agent-tree-line);
+  pointer-events: none;
+}
+
+/* The last node's guide stops at its own elbow: the tree ends there. */
+[data-compact-agent-list="true"] > [role="treeitem"]:last-child::before,
+.worktree-agent-lineage-children
+  > [role="treeitem"]:last-child::before {
+  bottom: 50%;
+}
+
+[data-compact-agent-list="true"] .worktree-agent-lineage-parent-row:hover:not(:disabled),
+[data-compact-agent-list="true"] .worktree-agent-lineage-child-row:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--foreground) 1.25%, transparent);
+}
+
+.dark [data-compact-agent-list="true"] .worktree-agent-lineage-parent-row:hover:not(:disabled),
+.dark [data-compact-agent-list="true"] .worktree-agent-lineage-child-row:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--worktree-sidebar-accent) 18%, transparent);
+}
+
+.worktree-agent-lineage-children {
+  /* One level of indent per depth: wide enough to read the elbow, tight
+     enough that a depth-3 row's name still has room beside its state. The
+     0.5rem + 0.25rem step is 12px per depth, pinned by the sidebar-tree
+     acceptance's nesting asserts — keep both halves in step. */
+  margin-left: 0.5rem;
+  padding-left: 0.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: 2px;
+}
+
+.dark [data-compact-agent-list="true"] .worktree-agent-lineage-parent-row,
+.dark [data-compact-agent-list="true"] .worktree-agent-lineage-child-row {
+  background: transparent;
+  box-shadow: none;
+}
+
+/* Issue #606: the same lineage, one row wide. The sidebar boxes children
+   under their parent; the strip is a single horizontal run, so a subagent
+   tab reads as a member through a leading rule in the group's own tokens
+   (.worktree-agent-lineage-children) plus an indent, and the leader
+   carries the chevron that folds the whole run into itself. */
+.tab-lineage-child {
+  padding-inline-start: 0.75rem;
+  box-shadow: inset 1px 0 0 0
+    color-mix(in srgb, var(--foreground) 16%, transparent);
+}
+
+.dark .tab-lineage-child {
+  box-shadow: inset 1px 0 0 0
+    color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+/* Issue #622: nested groups compound their indentation (margin + padding per
+   level), so every group and its direct tree nodes must be allowed to
+   shrink — without min-width the depth-3 rows overflow the default sidebar
+   width instead of truncating. Rows already carry min-w-0 + truncate. */
+.worktree-agent-lineage-children {
+  min-width: 0;
+}
+
+.worktree-agent-lineage-children > [data-lineage-depth] {
+  min-width: 0;
+}
+
+/* The fork's compact-agent-summary-panel + expansion grid (reference
+   main.css verbatim): the collapsed summary keeps pill spacing while the
+   expanded tree reads quiet inside the card; the reveal animates the grid
+   track so it stays CSS-owned and interruptible. */
+.compact-agent-summary-panel {
+  padding: 2px;
+  border-radius: var(--radius-sm, 0.25rem);
+  background: transparent;
+  box-shadow: inset 0 0 0 1px transparent;
+  transition:
+    background 180ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.compact-agent-summary-panel-expanded {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px transparent;
+}
+
+.compact-agent-expansion-grid {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.compact-agent-expansion-grid-expanded {
+  grid-template-rows: 1fr;
+}
+
+@keyframes compact-agent-expansion-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.compact-agent-expansion-grid-expanded .compact-agent-expansion-content {
+  animation: compact-agent-expansion-reveal 180ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .compact-agent-expansion-grid {
+    transition-duration: 0ms;
+  }
+
+  .compact-agent-expansion-grid-expanded .compact-agent-expansion-content {
+    animation: none;
+  }
+}
+
+.compact-agent-child-disclosure-button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--ring) 60%, transparent);
+}
+
+/* Owner's guide: the fold chevrons rotate via Tailwind transitions, so they
+   need their own reduced-motion escape — folding stays instant for users
+   who asked for less motion. */
+@media (prefers-reduced-motion: reduce) {
+  .shell-worktree-card-fold svg,
+  .compact-agent-child-disclosure-button svg,
+  .compact-agent-summary-button svg {
+    transition: none;
+  }
+}
+/* Agent-state glyphs moved to the fork-literal `.agent-working-spinner`
+   section appended at the end of this file (R16-I); the retired
+   `.shell-agent-*` classes above are gone with it. */
+.shell-footer .shell-footer-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 8px;
+}
+.shell-footer-actions {
+  display: flex;
+  gap: 2px;
+}
+.shell-help-popover {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--muted-foreground);
+}
+/* Browser pane (journey J4): chrome for the sandboxed guest view. */
+.browser-pane {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  background: var(--background);
+  color: var(--foreground);
+}
+.browser-tabstrip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 8px 0;
+  overflow-x: auto;
+}
+.browser-tab {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  max-width: 220px;
+  padding: 4px 4px 4px 10px;
+  border: 1px solid transparent;
+  border-radius: 6px 6px 0 0;
+  color: var(--muted-foreground);
+}
+.browser-tab[data-current="true"] {
+  border-color: var(--border);
+  background: var(--secondary);
+  color: var(--foreground);
+}
+.browser-tab-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 12px;
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+}
+.browser-dot {
+  width: 6px;
+  height: 6px;
+  flex: none;
+  border-radius: 9999px;
+  background: var(--muted-foreground);
+}
+.browser-bar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+}
+.browser-address {
+  flex: 1;
+  min-width: 0;
+  margin-left: 4px;
+  padding: 5px 10px;
+  border: 1px solid var(--input);
+  border-radius: 6px;
+  background: var(--background);
+  color: var(--foreground);
+  font-size: 12px;
+}
+.browser-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  flex: none;
+  border: none;
+  border-radius: 4px;
+  background: none;
+  color: var(--muted-foreground);
+  cursor: pointer;
+}
+.browser-icon-button:hover:not(:disabled) {
+  background: var(--sidebar-accent);
+  color: var(--foreground);
+}
+.browser-icon-button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.browser-notice {
+  margin: 0;
+  padding: 6px 12px;
+  font-size: 12px;
+  color: var(--destructive);
+  border-bottom: 1px solid var(--border);
+}
+.browser-viewport {
+  position: relative;
+  flex: 1;
+  min-height: 240px;
+  background: var(--background);
+}
+.browser-status {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 24px;
+  text-align: center;
+  color: var(--muted-foreground);
+}
+.browser-status h1 {
+  margin: 0;
+  font-size: 15px;
+  color: var(--foreground);
+}
+.browser-status p {
+  margin: 0;
+  max-width: 460px;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.browser-retry {
+  padding: 5px 14px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--secondary);
+  color: var(--foreground);
+  font-size: 12px;
+  cursor: pointer;
+}
+.browser-capture {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--muted-foreground);
+  cursor: pointer;
+}
+
+/* Settings page (R6-C). Full-page shell ported from the Orca reference
+   settings-page-renderer (sidebar + max-w-4xl panes), SettingsSection card
+   grammar and SettingsFormControls row grammar: layout rides Tailwind
+   utilities in the components, so only the leftover control primitives
+   that predate the port stay here. Monochrome tokens only. */
+.settings-switch {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--primary);
+}
+.settings-inline-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.settings-number-input {
+  width: 72px;
+}
+.settings-unit {
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+.settings-select {
+  max-width: 220px;
+  padding: 6px 8px;
+  border: 1px solid var(--input);
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font-size: 13px;
+}
+.settings-field-error {
+  margin: 4px 0;
+  font-size: 12px;
+  color: var(--destructive);
+}
+.settings-agent-block {
+  margin: 12px 0 4px;
+  padding: 0 0 8px;
+  border: none;
+  border-top: 1px solid var(--border);
+}
+.settings-agent-block:first-of-type {
+  border-top: none;
+}
+.settings-agent-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 12px 0 4px;
+}
+.settings-agent-default-badge {
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted-foreground);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 1px 8px;
+}
+.settings-shortcut-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 12px;
+}
+.settings-shortcut-group-title {
+  margin: 0 0 6px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted-foreground);
+}
+.settings-shortcut-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.settings-shortcut-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+}
+.settings-shortcut-title {
+  font-size: 13px;
+}
+.settings-shortcut-keys {
+  display: inline-flex;
+  gap: 4px;
+}
+.settings-kbd {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  border: 1px solid var(--border);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 1px 6px;
+  background: var(--accent);
+}
+.settings-empty,
+.settings-note {
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+.settings-subhead {
+  margin: 12px 0 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+.settings-value {
+  font-size: 13px;
+}
+.settings-unavailable {
+  font-size: 13px;
+  color: var(--muted-foreground);
+}
+.settings-pre {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin: 8px 0;
+  max-height: 160px;
+  overflow-y: auto;
+}
+/* Terminal font size hook: App sets --terminal-font-size from the store. */
+.terminal-surface {
+  font-size: var(--terminal-font-size, 13px);
+}
+/* Tasks page (R8-G1, Orca task-page port, MIT Copyright (c) 2026 Lovecast
+   Inc.): the page renders with Tailwind utilities from the ported
+   components; only the shared scroll/popover helpers they reference live
+   here (ported from the source's main.css). */
+.scrollbar-sleek {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--muted-foreground, #737373) 34%, transparent) transparent;
+}
+.scrollbar-sleek::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+.scrollbar-sleek::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-sleek::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--muted-foreground, #737373) 28%, transparent);
+  border: 3px solid transparent;
+  border-radius: 0;
+  background-clip: padding-box;
+  min-height: 28px;
+}
+/* Thicker variant for dense data tables where the default 6px-thumb is hard to grab. */
+.scrollbar-sleek-lg {
+  scrollbar-width: auto;
+}
+.scrollbar-sleek-lg::-webkit-scrollbar {
+  width: 16px;
+  height: 16px;
+}
+.scrollbar-sleek-lg::-webkit-scrollbar-thumb {
+  border-width: 3px;
+  min-height: 36px;
+}
+.scrollbar-sleek::-webkit-scrollbar-thumb:hover {
+  background-color: color-mix(in srgb, var(--muted-foreground, #737373) 48%, transparent);
+}
+.scrollbar-sleek::-webkit-scrollbar-thumb:active {
+  background-color: color-mix(in srgb, var(--foreground, #171717) 36%, transparent);
+}
+.popover-scroll-content {
+  color-scheme: dark;
+  max-height: min(15rem, var(--radix-popover-content-available-height, 15rem));
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.shell-worktree-card-issue {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--foreground);
+}
+.shell-worktree-card-linked-meta {
+  flex-wrap: wrap;
+  gap: 4px 8px;
+}
+.shell-worktree-card-linked-meta .shell-worktree-card-issue {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  max-width: 100%;
+}
+.shell-worktree-card-issue-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.shell-worktree-card-linked-meta button {
+  cursor: pointer;
+  border-radius: 3px;
+}
+.shell-worktree-card-linked-meta button:hover {
+  background: var(--muted);
+}
+.shell-worktree-card-linked-meta button:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+/* R4-C shell dialogs and card menu (append-only): project add, inline new
+   worktree, remove confirm, kebab menu, and the inner select surface of the
+   restructured worktree card (outer keeps .shell-worktree-card). */
+.shell-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 4px 8px 8px 16px;
+  padding: 10px 12px;
+  font-size: 12px;
+  border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+  border-radius: calc(var(--radius) * 0.8);
+  background: color-mix(in srgb, var(--foreground) 3%, transparent);
+}
+.shell-dialog label {
+  font-weight: 600;
+  color: var(--foreground);
+}
+/* #220: the delete confirm is a centered modal now (like the fork), so the
+   sidebar inline margins do not apply inside the dialog content. */
+.shell-dialog-in-modal {
+  margin: 0;
+  border: 0;
+  padding: 0;
+  background: transparent;
+}
+.shell-optional {
+  font-weight: 400;
+  color: var(--muted-foreground);
+}
+.shell-form-error {
+  margin: 2px 0;
+  color: #dc2626;
+  overflow-wrap: anywhere;
+}
+.shell-inline-form {
+  margin-left: 16px;
+}
+.shell-confirm-text {
+  margin: 0;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.shell-confirm-text strong {
+  font-family: var(--font-mono);
+}
+.shell-check-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 400;
+}
+.shell-worktree-card {
+  position: relative;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+/* R1 density: the agent rows are direct card children after the header
+   column. They take their own full-width flex line (after the fold, lane,
+   header content, affordances and kebab), so the tree uses the whole card
+   width the way the owner's guide draws it. DOM order keeps rows before
+   the kebab for keyboard/announcement order; visual order is unchanged. */
+.shell-worktree-card-rows {
+  order: 6;
+  flex: 1 1 100%;
+  min-width: 0;
+  /* R1 finisher: the genuine tree gutter. Measured at 280px the R1 root
+     sat 9px inside the card while the guide nests the root clearly right
+     of the card fold with its connectors wholly inside. The card carries
+     16px of left padding, so 0.75rem (12px) of tree gutter lands the root
+     ~28px in — roughly +19px of real nesting — while the right side stays
+     flush on the full-width line. The root connector offset (-0.55rem)
+     then draws at ~19px, inside the card in both themes. */
+  padding-inline-start: 0.75rem;
+}
+.shell-worktree-card-select {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 0;
+}
+.shell-worktree-card-select:disabled {
+  cursor: default;
+}
+.shell-worktree-card-menu {
+  position: relative;
+  flex-shrink: 0;
+}
+.shell-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  min-width: 150px;
+  padding: 4px;
+  background: var(--background);
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) * 0.8);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--foreground) 12%, transparent);
+}
+.shell-menu-item {
+  padding: 6px 10px;
+  text-align: left;
+  font-size: 12px;
+  cursor: pointer;
+  color: var(--foreground);
+  background: transparent;
+  border: 0;
+  border-radius: calc(var(--radius) * 0.6);
+}
+.shell-menu-item:hover {
+  background: color-mix(in srgb, var(--foreground) 8%, transparent);
+}
+.shell-worktree-card-base {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* R7-A composer + add-project dialogs (append-only): Radix dialog chrome
+   for the new-workspace composer modal and the ported Add Project folder
+   dialog, mirroring the source's sm:max-w-lg panel, title row and
+   section spacing. */
+.composer-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgb(0 0 0 / 0.5);
+  overflow-y: auto;
+}
+.composer-content {
+  position: fixed;
+  top: 10vh;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 51;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: calc(100% - 32px);
+  max-width: 32rem;
+  max-height: calc(100vh - 20vh);
+  overflow-y: auto;
+  padding: 20px 20px 16px;
+  color: var(--foreground);
+  background: var(--background);
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) * 1.2);
+  box-shadow: 0 12px 40px rgb(0 0 0 / 0.35);
+}
+.composer-content:focus {
+  outline: none;
+}
+.composer-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.composer-heading {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.composer-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.composer-description {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+.composer-form {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 16px;
+}
+.composer-section {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+}
+.composer-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted-foreground);
+}
+.composer-actions {
+  justify-content: flex-end;
+}
+
+/* Automations (R8-O1): list table container + sleek scrollbar shared by the
+   automations list and detail panes. */
+.automations-table-container {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--foreground) 22%, transparent) transparent;
+}
+.automations-table-container::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.automations-table-container::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--foreground) 22%, transparent);
+  border-radius: 4px;
+}
+.automations-table-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* R9-B shell chrome (Orca port, MIT Copyright (c) 2026 Lovecast Inc.):
+   the titlebar-left header lives in the sidebar column at the sidebar
+   width (floating shrink-wrap when collapsed), and the sidebar header
+   options/help menus share one menu recipe. */
+.titlebar-left {
+  height: 36px;
+  min-height: 36px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  overflow: hidden;
+  flex-shrink: 0;
+  /* In the sidebar column this strip sits directly above the worktree
+     sidebar — match its surface so the left column reads as one panel. */
+  background: var(--worktree-sidebar);
+  /* Inset shadow instead of border-bottom so flex-centered controls align
+     with the native traffic-light center instead of sitting half a pixel
+     low. */
+  box-shadow: inset 0 -1px 0 var(--border);
+  -webkit-app-region: drag;
+  user-select: none;
+}
+/* When the sidebar is collapsed this header shrink-wraps over the
+   titlebar, so keep the standard titlebar surface instead of the
+   sidebar tint. */
+.titlebar-left-floating {
+  width: max-content;
+  max-width: 100%;
+  background: var(--bg-titlebar, var(--card));
+}
+.sidebar-menu {
+  min-width: 200px;
+  /* Why: an unbounded menu can grow past the real window height with no
+     scroll affordance, stranding trailing items (e.g. "Add Project")
+     outside the viewport. Bound it to Radix's own measured available
+     space and let it scroll, same as the ui/dropdown-menu.tsx wrapper's
+     DropdownMenuContent already does. */
+  max-height: var(--radix-dropdown-menu-content-available-height);
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: var(--background);
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) * 0.8);
+  box-shadow: var(--shadow-floating);
+  padding: 4px;
+  z-index: 10;
+}
+.sidebar-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: calc(var(--radius) * 0.6);
+  font-size: 13px;
+  cursor: pointer;
+  outline: none;
+}
+.sidebar-menu-item[data-highlighted] {
+  background: var(--accent);
+  color: var(--accent-foreground);
+  outline: 1px solid var(--ring);
+  outline-offset: -1px;
+}
+.sidebar-menu-item[data-disabled] {
+  color: var(--muted-foreground);
+  cursor: default;
+}
+.sidebar-menu-separator {
+  height: 1px;
+  margin: 4px 6px;
+  background: var(--border);
+}
+.sidebar-menu-filter {
+  padding: 4px;
+}
+
+/* File Explorer (R10-D): rows mirror the reference's FileExplorerRow —
+   full-width 26px rows, 16px-per-level indent, chevron/file affordances —
+   with the reference's selected-row treatment (mixed accent fill plus an
+   inset ring, which stays legible where flat bg-accent ≈ panel). Menus
+   and the delete dialog ride the popover tokens. */
+.file-explorer-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--foreground) 22%, transparent) transparent;
+}
+.file-explorer-scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.file-explorer-scroll::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--foreground) 22%, transparent);
+  border-radius: 4px;
+}
+.file-explorer-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+[data-file-explorer-row][data-selected="true"] {
+  background: color-mix(in srgb, var(--foreground) 8%, var(--accent));
+  box-shadow: inset 0 0 0 1px var(--border);
+  color: var(--accent-foreground);
+}
+[data-file-explorer-row][data-selected="true"]:hover {
+  background: color-mix(in srgb, var(--foreground) 10%, var(--accent));
+}
+.dark [data-file-explorer-row][data-selected="true"] {
+  background: color-mix(in srgb, var(--accent) 70%, transparent);
+}
+.dark [data-file-explorer-row][data-selected="true"]:hover {
+  background: color-mix(in srgb, var(--accent) 80%, transparent);
+}
+[data-file-explorer-inline-input] input:focus-visible {
+  outline: 1px solid var(--ring);
+  outline-offset: -1px;
+}
+
+/* Source Control (R10-B): git decoration tokens ported from the reference
+   main.css light/dark values; rows, diff counts and the branch line-total
+   chip read these so status colors follow the documented palette. */
+:root {
+  --git-decoration-added: #587c0c;
+  --git-decoration-modified: #895503;
+  --git-decoration-deleted: #ad0707;
+  --git-decoration-renamed: #007acc;
+  --git-decoration-untracked: #007100;
+  --git-decoration-copied: #007acc;
+  --git-decoration-ignored: #8c8c8c;
+}
+.dark {
+  --git-decoration-added: #81b88b;
+  --git-decoration-modified: #e2c08d;
+  --git-decoration-deleted: #c74e39;
+  --git-decoration-renamed: #73c991;
+  --git-decoration-untracked: #73c991;
+  --git-decoration-copied: #73c991;
+  --git-decoration-ignored: #6e6e6e;
+}
+
+/* R9-A worktree card actions (append-only): Radix context-menu chrome for
+   the card menu, the inline-rename editor, the delete-dialog extras, and
+   the ahead/behind + PR + agent-summary badges. Mirrors the source's
+   dropdown panel, item rows with icons, shortcut chip, and destructive
+   row; tokens follow this repo's theme variables. */
+.shell-worktree-context-menu-scope {
+  position: relative;
+  min-width: 0;
+}
+.shell-worktree-context-menu-trigger {
+  pointer-events: none;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+.shell-worktree-context-menu {
+  z-index: 70;
+  min-width: 13rem;
+  padding: 4px;
+  color: var(--foreground);
+  background: var(--background);
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) * 0.8);
+  box-shadow: 0 12px 28px rgb(0 0 0 / 0.22);
+}
+.shell-worktree-context-menu-label {
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted-foreground);
+}
+.shell-worktree-context-menu-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  font-size: 12px;
+  line-height: 17px;
+  border-radius: calc(var(--radius) * 0.6);
+  outline: none;
+  user-select: none;
+  cursor: default;
+}
+.shell-worktree-context-menu-item:focus-visible,
+.shell-worktree-context-menu-item[data-highlighted] {
+  background: color-mix(in srgb, var(--foreground) 8%, transparent);
+}
+.shell-worktree-context-menu-item[data-disabled] {
+  opacity: 0.5;
+  pointer-events: none;
+}
+.shell-worktree-context-menu-item svg {
+  flex-shrink: 0;
+}
+.shell-worktree-context-menu-item-destructive {
+  color: #dc2626;
+}
+.shell-worktree-context-menu-item-destructive:focus-visible,
+.shell-worktree-context-menu-item-destructive[data-highlighted] {
+  background: color-mix(in srgb, #dc2626 10%, transparent);
+  color: #dc2626;
+}
+.shell-worktree-context-menu-separator {
+  height: 1px;
+  margin: 4px 0;
+  background: var(--border);
+}
+.shell-worktree-context-menu-shortcut {
+  margin-left: auto;
+  padding-left: 16px;
+  font-size: 11px;
+  color: var(--muted-foreground);
+}
+.shell-worktree-title-rename {
+  position: relative;
+  display: grid;
+  min-width: 0;
+  flex: 1;
+}
+.shell-worktree-title-rename-input {
+  min-width: 0;
+  height: 1lh;
+  padding: 0;
+  font: inherit;
+  color: var(--foreground);
+  background: transparent;
+  border: 0;
+  outline: none;
+}
+.shell-worktree-title-rename-input:disabled {
+  opacity: 0.6;
+}
+.shell-worktree-title-rename-error {
+  font-size: 11px;
+  color: #dc2626;
+  overflow-wrap: anywhere;
+}
+.shell-delete-dialog {
+  gap: 10px;
+}
+.shell-dialog-title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--foreground);
+}
+.shell-delete-dialog-description {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted-foreground);
+  overflow-wrap: anywhere;
+}
+.shell-delete-target-preview {
+  padding: 8px 12px;
+  font-size: 12px;
+  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  border-radius: calc(var(--radius) * 0.8);
+  background: color-mix(in srgb, var(--foreground) 3%, transparent);
+  overflow-wrap: anywhere;
+}
+.shell-delete-dirty-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  max-width: 100%;
+  margin-top: 4px;
+  font-size: 12px;
+  color: #dc2626;
+}
+.shell-delete-warning-panel {
+  padding: 8px 12px;
+  font-size: 12px;
+  color: var(--muted-foreground);
+  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  border-radius: calc(var(--radius) * 0.8);
+  background: color-mix(in srgb, var(--foreground) 3%, transparent);
+}
+.shell-worktree-card-ahead-behind {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted-foreground);
+}
+.shell-worktree-card-pr {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--foreground);
+}
+.shell-worktree-card-agents {
+  flex-shrink: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  color: var(--muted-foreground);
+}
+
+/* R12-D tab strip (Orca port, MIT Copyright (c) 2026 Lovecast Inc.,
+   verbatim from the source main.css): overflow edge fades. */
+/* Why: mask fades avoid painting card-colored overlays that mismatch active tabs. */
+.terminal-tab-strip--fade-start.terminal-tab-strip--fade-end {
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent,
+    #000 1.5rem,
+    #000 calc(100% - 1.5rem),
+    transparent
+  );
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    #000 1.5rem,
+    #000 calc(100% - 1.5rem),
+    transparent
+  );
+}
+
+.terminal-tab-strip--fade-start:not(.terminal-tab-strip--fade-end) {
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 1.5rem, #000 100%);
+  mask-image: linear-gradient(to right, transparent, #000 1.5rem, #000 100%);
+}
+
+.terminal-tab-strip--fade-end:not(.terminal-tab-strip--fade-start) {
+  -webkit-mask-image: linear-gradient(to right, #000 0, #000 calc(100% - 1.5rem), transparent);
+  mask-image: linear-gradient(to right, #000 0, #000 calc(100% - 1.5rem), transparent);
+}
+
+/* ── Jump palette (⌘J) + quick open (⌘P) rows (R12-B) ──────────────────── */
+/* Row anatomy ported from the read-only reference worktree-jump-palette
+ * rows (status dot, title, badges, dimmed branch/url, project chip),
+ * MIT Copyright (c) 2026 Lovecast Inc. Tokens reuse this repo's palette. */
+
+.jump-palette-dot {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  align-self: center;
+  background: var(--muted-foreground);
+}
+.jump-palette-dot[data-state="working"] {
+  background: #22a06b;
+}
+.jump-palette-dot[data-state="needs_input"] {
+  background: #d9930d;
+}
+.jump-palette-dot[data-state="idle"] {
+  background: var(--muted-foreground);
+}
+.jump-palette-dot[data-state="exited"] {
+  background: transparent;
+  border: 1px solid var(--muted-foreground);
+}
+.jump-palette-dot[data-state="unknown"] {
+  background: transparent;
+  border: 1px dashed var(--muted-foreground);
+}
+
+.jump-palette-leading {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  color: var(--muted-foreground);
+}
+
+.jump-palette-badge {
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--background) 45%, transparent);
+  padding: 1px 6px;
+  font-size: 9px;
+  font-weight: 500;
+  line-height: normal;
+  color: var(--muted-foreground);
+}
+
+.jump-palette-project {
+  flex-shrink: 0;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) * 0.5);
+  background: var(--muted);
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--foreground);
+}
+
+.jump-palette-create-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: var(--muted-foreground);
+}
+
+.jump-palette-empty {
+  padding: 32px 20px;
+  text-align: center;
+}
+.jump-palette-empty-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--foreground);
+}
+.jump-palette-empty-subtitle {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+
+.quick-open-row .command-palette-label {
+  font-weight: 600;
+}
+.quick-open-dir {
+  margin-left: 0;
+}
+
+/* R13-C toasts (Orca port, MIT Copyright (c) 2026 Lovecast Inc.,
+   verbatim from the source main.css [data-sonner-toaster] section, plus the
+   pointer-bounds deviation below). */
+[data-sonner-toaster] {
+  font-family: var(--font-sans);
+  z-index: 40 !important;
+  /* Why (Drogon deviation: the source leaves this unset): the <ol> is a
+     26rem-wide fixed box whose height is 0 — its toasts are absolute — yet
+     Sonner never opts it out of hit-testing, so the whole column (and the
+     expanded stack's 15px ::after hover gap) stayed clickable over page
+     content. The packaged acceptance click on the Bots form's Create Bot hit
+     it. The layer claims nothing; a toast claims nothing either (next rule). */
+  pointer-events: none;
+}
+
+[data-sonner-toaster] [data-sonner-toast] {
+  /* Why: a Sonner toast is a notification, not a control. The card's text and
+     padding take no input of their own, so claiming pointer events on them only
+     swallows clicks aimed at the app underneath — the packaged acceptance's
+     Create Bot click landed on `<div data-title>Automation run queued.</div>`
+     and never reached the submit. The card is transparent to the pointer; every
+     control it actually offers (next rule) stays interactive, so nothing a user
+     can act on is lost. Sonner's hover-to-expand and drag-to-dismiss need the
+     card itself to receive pointer events; the stack still drains on its own
+     (each toast keeps its own lifetime) and every toast keeps its close
+     button, which is the affordance this app relies on (`closeButton`). */
+  pointer-events: none;
+}
+
+/* The controls a toast offers keep working: Sonner's close button and action/
+   cancel buttons, plus any real control a custom toast body renders (the
+   delete-worktree failure card's View / Force Delete buttons, the OSC 52
+   clipboard card's action, and so on). */
+[data-sonner-toaster]
+  [data-sonner-toast]
+  :is(
+    button,
+    a,
+    input,
+    select,
+    textarea,
+    [role='button'],
+    [role='link'],
+    [data-close-button],
+    [data-button]
+  ) {
+  pointer-events: auto;
+}
+
+/* A toast the user dismissed (Sonner keeps it mounted, fully transparent, for
+   its exit animation) — and one that is still entering or stacked out of
+   sight — must never be the target of a click either. The failing acceptance
+   log named a `data-removed='true'` toast as the intercepting element. */
+[data-sonner-toaster] [data-sonner-toast][data-removed='true'],
+[data-sonner-toaster] [data-sonner-toast][data-mounted='false'],
+[data-sonner-toaster] [data-sonner-toast][data-visible='false'] {
+  pointer-events: none;
+}
+
+[data-sonner-toaster] [data-sonner-toast][data-styled='true'] {
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 14px 16px;
+  box-shadow: var(--shadow-floating);
+}
+
+[data-sonner-toaster] [data-sonner-toast][data-styled='true'] [data-icon] {
+  margin-top: 2px;
+}
+
+[data-sonner-toaster] [data-sonner-toast][data-styled='true'] [data-content] {
+  min-width: 0;
+  flex: 1 1 calc(100% - 30px);
+  gap: 6px;
+}
+
+[data-sonner-toaster] [data-sonner-toast][data-styled='true'] [data-button] {
+  /* Why: Sonner's native action slots otherwise share the copy row and squeeze
+     long notices; indent the wrapped footer to align with text after the icon. */
+  margin-top: 2px;
+  margin-left: 26px;
+  margin-right: 0;
+}
+
+[data-sonner-toaster] [data-sonner-toast][data-styled='true'] [data-button] ~ [data-button] {
+  margin-left: 0;
+}
+
+[data-sonner-toaster] [data-sonner-toast][data-styled='true'] [data-title] {
+  line-height: 1.35;
+}
+
+[data-sonner-toaster] [data-sonner-toast][data-styled='true'] [data-description] {
+  /* Why: match the 80% body-copy opacity used by the custom-React toast bodies
+     (delete-worktree-failure, local-base-ref-suggestion) so string and JSX
+     descriptions read at the same weight. */
+  color: color-mix(in srgb, var(--popover-foreground) 80%, transparent);
+  line-height: 1.45;
+}
+
+[data-sonner-toaster] [data-sonner-toast][data-styled='true'] [data-close-button] {
+  /* Why: Sonner's dark-theme defaults can resolve the close icon and button
+     background to the same color; keep the X readable on both Orca themes. */
+  color: var(--popover-foreground);
+  background: var(--popover);
+  border-color: rgb(0 0 0 / 0.14);
+}
+
+[data-sonner-toaster][data-sonner-theme='dark']
+  [data-sonner-toast][data-styled='true']
+  [data-close-button] {
+  color: var(--popover-foreground);
+  background: var(--popover);
+  border-color: rgb(255 255 255 / 0.14);
+}
+
+.dark [data-sonner-toaster] [data-sonner-toast][data-styled='true'] [data-close-button] {
+  border-color: rgb(255 255 255 / 0.14);
+}
+
+/* R12-A: Monaco editor pane content. `.editor-pane-surface` (defined above,
+   ~line 924) was sized for the emitted textarea it directly styled; it is
+   now a plain layout wrapper around Monaco/CsvViewer/the large-file
+   fallback, so its own padding is cleared here — Monaco fills the pane
+   edge to edge like the source, and the fallback textarea gets its own
+   inset (it still IS a textarea, so the mono/size/color it inherits from
+   the wrapper still applies). */
+.editor-pane-surface {
+  padding: 0;
+}
+.editor-pane-large-file-fallback {
+  padding: 12px 14px;
+}
+.editor-pane-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+.editor-pane-changed-on-disk {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--destructive);
+}
+
+/* ── Settings: terminal typography (R14-E) ─────────────────────────── */
+/* MIT Copyright (c) 2026 Lovecast Inc. Ported from the Orca reference
+   src/renderer/src/assets/main.css (.number-input-clean): hides the native
+   number-input spin buttons, which overlap the value and duplicate the
+   typography steppers. */
+.number-input-clean {
+  appearance: textfield;
+}
+
+.number-input-clean::-webkit-outer-spin-button,
+.number-input-clean::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* ── Sidebar drag reorder (R16-K) ─────────────────────────────────── */
+/* MIT Copyright (c) 2026 Lovecast Inc. Ported from the Orca reference
+   src/renderer/src/assets/main.css ([data-worktree-sidebar-drag-preview]
+   and the WorktreeSidebarDropIndicator recipe): the drop line itself is
+   Tailwind classes in ProjectList.tsx (dot-line-dot on the
+   worktree-sidebar ring token, like the source component); only the
+   positioning anchor, the header affordance and the floating card
+   preview live here. */
+.shell-projects {
+  position: relative;
+}
+
+/* The whole project header is the drag handle (actions opt out via the
+   action selector in project-header-drag-contract.ts); grab signals the
+   affordance without stealing the row's click. */
+.shell-project-row[data-project-header-drag-handle] {
+  cursor: grab;
+}
+
+[data-worktree-card-drag-preview='true'] {
+  z-index: 2147483000;
+  overflow: visible;
+  border-radius: var(--radius);
+  opacity: 0.96;
+  filter: drop-shadow(0 10px 24px color-mix(in srgb, var(--foreground) 18%, transparent));
+  will-change: transform;
+}
+
+[data-worktree-card-drag-preview='true'] * {
+  cursor: grabbing !important;
+}
+
+/* ── R16-E window chrome (#145) + card parity (#147) ─────────────────── */
+/* MIT Copyright (c) 2026 Lovecast Inc. Ported from the Orca reference
+   src/renderer/src/assets/main.css (.titlebar/.titlebar-left drag
+   regions) and
+   src/renderer/src/components/tab-group/TabGroupPanel.tsx (the tab row
+   is a window-drag region under hiddenInset; interactive children opt
+   out with no-drag). The sidebar titlebar row (.titlebar-left) and the
+   right-sidebar header (.right-sidebar-header-drag) already drag above;
+   this extends the same recipe to the tab strip's empty area. */
+/* Why: with titleBarStyle hiddenInset the empty strip area moves the
+   window; tabs, buttons and the rename input opt out so they stay
+   clickable (Electron drag regions swallow renderer pointer events). */
+.tab-row-window-drag {
+  -webkit-app-region: drag;
+}
+.tab-row-window-drag [role="tab"],
+.tab-row-window-drag button,
+.tab-row-window-drag input {
+  -webkit-app-region: no-drag;
+}
+/* Why: the fork's worktree card keeps the agent summary and the relative
+   time on one compact line with no duplicated session count; the line
+   truncates instead of wrapping the timestamp onto its own row. */
+.shell-worktree-card-summary {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  color: var(--muted-foreground);
+}
+.shell-worktree-card-note {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 4px;
+  overflow: hidden;
+  color: var(--muted-foreground);
+  font-size: 11px;
+}
+.shell-worktree-card-note > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Agent-state visuals (R16-I) ─────────────────────────────────────── */
+/* MIT Copyright (c) 2026 Lovecast Inc. Ported from the Orca reference
+   src/renderer/src/assets/main.css (.agent-working-spinner): the working
+   ring animates on the compositor so rotation never touches the input
+   thread; steps(12) preserves the retired cadence. */
+@keyframes agent-spinner-rotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.agent-working-spinner {
+  animation: agent-spinner-rotate 1s steps(12, end) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .agent-working-spinner {
+    animation: none;
+  }
+}
+
+/* ── Split terminal (R16-N, issue #129) ─────────────────────────────── */
+/* MIT Copyright (c) 2026 Lovecast Inc. Ported from the Orca reference
+   src/renderer/src/assets/terminal.css (`.pane-divider.is-vertical` line
+   art and the `.pane-title-bar[data-chromeless]` overlay rules, already
+   ported to terminal.css): only the Drogon flexbox host geometry lives
+   here. The divider element is a wide transparent hit area; the visible
+   line is drawn by terminal.css ::after. */
+.terminal-split-host {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  flex-direction: row;
+  align-items: stretch;
+}
+.terminal-split-pane {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+.terminal-split-pane > .terminal-surface {
+  display: flex;
+  flex-direction: column;
+}
+/* Divider hit box between the two panes (the fork's pane-manager
+   positions its dividers absolutely; the flex row needs an explicit
+   box and cursor here). */
+.terminal-split-host > .pane-divider.is-vertical {
+  position: relative;
+  flex: 0 0 auto;
+  width: 9px;
+  margin: 0 -2px;
+  cursor: col-resize;
+  touch-action: none;
+  outline: none;
+}
+.terminal-split-host > .pane-divider.is-vertical:focus-visible {
+  outline: 1px solid var(--ring);
+  outline-offset: -1px;
+}
+
+
+/* ── Daemon connection (R16-M) ─────────────────────────────────────── */
+/* MIT Copyright (c) 2026 Lovecast Inc. Ported from the Orca reference
+   src/renderer/src/components/terminal-pane/TerminalRemoteRuntimeReconnectBanner.tsx
+   (retrying/disconnected card) and
+   src/renderer/src/components/status-bar/SshStatusSegment.tsx
+   (segment trigger). The cards themselves are Tailwind recipes, like the
+   other ports; only the app-level slot geometry and the reduced-motion
+   guard for the retry spinners live here. */
+.daemon-connection-banner {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .daemon-connection-spinner {
+    animation: none;
+  }
+}
+.shell-worktree-context-menu-subtrigger-chevron {
+  margin-left: auto;
+  width: 14px;
+  height: 14px;
+  color: var(--muted-foreground);
+}
+
+/* Sidebar redesign: the reference uses the app sidebar surface for one quiet,
+   continuous column, with navigation and content separated by rhythm rather
+   than competing panels. Keep the existing worktree tokens as local aliases
+   so card states remain unchanged outside this surface. */
+.workspace-sidebar {
+  --worktree-sidebar: var(--sidebar);
+  --worktree-sidebar-foreground: var(--sidebar-foreground);
+  --worktree-sidebar-accent: var(--sidebar-accent);
+  --worktree-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --worktree-sidebar-border: var(--sidebar-border);
+  --worktree-sidebar-ring: var(--sidebar-ring);
+  background: var(--sidebar);
+  color: var(--sidebar-foreground);
+}
+
+.titlebar-left {
+  background: var(--sidebar);
+  box-shadow: inset 0 -1px 0 var(--sidebar-border);
+}
+
+.titlebar-left.titlebar-left-floating {
+  background: var(--bg-titlebar, var(--card));
+}
+
+.shell-sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  padding: 14px 14px 10px;
+}
+
+.shell-nav-search {
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 8px;
+  background: var(--sidebar-accent);
+  color: color-mix(in srgb, var(--sidebar-foreground) 62%, transparent);
+}
+
+.shell-nav-search:hover {
+  background: var(--sidebar-accent);
+  color: var(--sidebar-foreground);
+}
+
+.shell-nav-search svg {
+  width: 15px;
+  height: 15px;
+  color: color-mix(in srgb, var(--sidebar-foreground) 62%, transparent);
+}
+
+.shell-nav-links button:not([aria-current="page"]) svg {
+  color: color-mix(in srgb, var(--sidebar-foreground) 62%, transparent);
+}
+
+.shell-nav-links button[aria-current="page"] svg {
+  color: var(--sidebar-foreground);
+}
+
+.shell-nav-links {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 10px;
+}
+
+.shell-nav-links button {
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 8px;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.shell-sidebar-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--sidebar-foreground) 22%, transparent) transparent;
+}
+
+.shell-projects {
+  padding-bottom: 10px;
+}
+
+.shell-sidebar-divider {
+  height: 1px;
+  flex-shrink: 0;
+  margin: 2px 14px 12px;
+  background: var(--sidebar-border);
+}
+
+.shell-projects-header {
+  height: 26px;
+  margin: 0 14px 6px;
+  padding: 4px 0 6px;
+}
+
+.shell-projects-header [data-sidebar-section-title],
+.shell-chats-header [data-sidebar-section-title] {
+  padding-left: 0;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--sidebar-foreground) 45%, transparent);
+}
+
+.shell-projects-header .shell-icon-button,
+.shell-chats-header .shell-icon-button {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  color: color-mix(in srgb, var(--sidebar-foreground) 55%, transparent);
+}
+
+.shell-projects-header > div:last-child button {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  color: color-mix(in srgb, var(--sidebar-foreground) 55%, transparent);
+}
+
+.shell-projects-header .shell-icon-button:hover:not(:disabled),
+.shell-projects-header > div:last-child button:hover:not(:disabled),
+.shell-chats-header .shell-icon-button:hover:not(:disabled) {
+  background: var(--sidebar-accent);
+  color: var(--sidebar-foreground);
+}
+
+.shell-project {
+  margin-bottom: 6px;
+}
+
+.shell-project-row {
+  height: 30px;
+  padding: 0 10px;
+  gap: 8px;
+  border-radius: 8px;
+}
+
+.shell-project-name {
+  font-size: 12.5px;
+}
+
+.shell-project-cards {
+  gap: 1px;
+}
+
+.shell-worktree-card {
+  margin-left: 0;
+  width: 100%;
+  padding: 8px 10px 8px 16px;
+  border-radius: 8px;
+}
+
+.shell-worktree-card-main {
+  gap: 4px;
+}
+
+.shell-worktree-card-select {
+  gap: 4px;
+}
+
+/* Selected card: the owner's guide tints the open workspace quiet blue, not
+   flat gray. The wash mixes the existing theme blue (--terminal-pane-locate:
+   blue-600 light, blue-400 dark) into transparency — no new token values,
+   no gradient, no glow — so the border reads blue beside unselected cards
+   in both themes while text contrast is untouched. Scoped to the sidebar
+   surface (the card's only home) so the wash beats the fork's gray active
+   recipe in both themes: the fork's `.dark` border rule carries an extra
+   class of specificity and would otherwise keep the white border. */
+.workspace-sidebar .shell-worktree-card[data-active="true"] {
+  border-color: color-mix(in srgb, var(--terminal-pane-locate) 45%, transparent);
+  background: color-mix(in srgb, var(--terminal-pane-locate) 12%, transparent);
+  box-shadow: none;
+}
+
+.workspace-sidebar .shell-worktree-card[data-active="true"]:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--terminal-pane-locate) 16%, transparent);
+}
+
+.dark .workspace-sidebar .shell-worktree-card[data-active="true"] {
+  border-color: color-mix(in srgb, var(--terminal-pane-locate) 55%, transparent);
+  background: color-mix(in srgb, var(--terminal-pane-locate) 14%, transparent);
+  box-shadow: none;
+}
+
+.dark .workspace-sidebar .shell-worktree-card[data-active="true"]:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--terminal-pane-locate) 18%, transparent);
+}
+
+.shell-chats {
+  margin-top: 14px;
+  padding-bottom: 10px;
+}
+
+.shell-chats-header {
+  height: 30px;
+  margin: 0 14px 6px;
+  padding: 4px 0 6px;
+}
+
+.shell-chat-bot-sessions .compact-agent-row {
+  height: 32px;
+  padding: 0 10px;
+  gap: 8px;
+  border-radius: 8px;
+  font-size: 12.5px;
+}
+
+.shell-sidebar-footer {
+  border-top-color: var(--sidebar-border);
+}
+
+.shell-sidebar-footer > div {
+  padding: 8px 12px;
+  border-top-color: var(--sidebar-border);
+}
+
+.shell-sidebar-footer .size-6 {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+}

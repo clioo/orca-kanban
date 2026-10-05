@@ -1,0 +1,839 @@
+{
+ "stateful": true,
+ "myself": {
+  "accountId": "fixture-user-1",
+  "displayName": "Jon Doe",
+  "emailAddress": "carlos@example.com"
+ },
+ "projects": [
+  {
+   "id": "20000",
+   "key": "APP",
+   "name": "Platform Delivery"
+  }
+ ],
+ "statuses": [
+  {
+   "id": "10000",
+   "name": "To Do",
+   "statusCategory": {
+    "key": "new",
+    "name": "To Do"
+   }
+  },
+  {
+   "id": "3",
+   "name": "In Progress",
+   "statusCategory": {
+    "key": "indeterminate",
+    "name": "In Progress"
+   }
+  },
+  {
+   "id": "10100",
+   "name": "In Review",
+   "statusCategory": {
+    "key": "indeterminate",
+    "name": "In Progress"
+   }
+  },
+  {
+   "id": "10101",
+   "name": "QA",
+   "statusCategory": {
+    "key": "indeterminate",
+    "name": "In Progress"
+   }
+  },
+  {
+   "id": "10001",
+   "name": "Done",
+   "statusCategory": {
+    "key": "done",
+    "name": "Done"
+   }
+  },
+  {
+   "id": "10102",
+   "name": "Blocked",
+   "statusCategory": {
+    "key": "indeterminate",
+    "name": "In Progress"
+   }
+  }
+ ],
+ "transitions": [
+  {
+   "id": "11",
+   "name": "To Do",
+   "to": {
+    "id": "10000",
+    "name": "To Do",
+    "statusCategory": {
+     "key": "new",
+     "name": "To Do"
+    }
+   }
+  },
+  {
+   "id": "21",
+   "name": "Start progress",
+   "to": {
+    "id": "3",
+    "name": "In Progress",
+    "statusCategory": {
+     "key": "indeterminate",
+     "name": "In Progress"
+    }
+   }
+  },
+  {
+   "id": "31",
+   "name": "Review",
+   "to": {
+    "id": "10100",
+    "name": "In Review",
+    "statusCategory": {
+     "key": "indeterminate",
+     "name": "In Progress"
+    }
+   }
+  },
+  {
+   "id": "41",
+   "name": "QA",
+   "to": {
+    "id": "10101",
+    "name": "QA",
+    "statusCategory": {
+     "key": "indeterminate",
+     "name": "In Progress"
+    }
+   }
+  },
+  {
+   "id": "51",
+   "name": "Done",
+   "to": {
+    "id": "10001",
+    "name": "Done",
+    "statusCategory": {
+     "key": "done",
+     "name": "Done"
+    }
+   }
+  }
+ ],
+ "boards": [
+  {
+   "id": 7,
+   "name": "Platform Delivery",
+   "type": "scrum",
+   "location": {
+    "projectKey": "APP",
+    "projectName": "Platform Delivery"
+   },
+   "columns": [
+    {
+     "name": "To Do",
+     "statuses": [
+      "10000"
+     ]
+    },
+    {
+     "name": "In Progress",
+     "statuses": [
+      "3"
+     ]
+    },
+    {
+     "name": "Review",
+     "statuses": [
+      "10100"
+     ]
+    },
+    {
+     "name": "QA",
+     "statuses": [
+      "10101"
+     ]
+    },
+    {
+     "name": "Done",
+     "statuses": [
+      "10001"
+     ]
+    }
+   ]
+  },
+  {
+   "id": 9,
+   "name": "Ops Kanban",
+   "type": "kanban",
+   "location": {
+    "projectKey": "APP",
+    "projectName": "Platform Delivery"
+   },
+   "columns": [
+    {
+     "name": "Open",
+     "statuses": [
+      "10000"
+     ]
+    },
+    {
+     "name": "Doing",
+     "statuses": [
+      "3",
+      "10100"
+     ]
+    },
+    {
+     "name": "Closed",
+     "statuses": [
+      "10001"
+     ]
+    }
+   ]
+  }
+ ],
+ "sprints": [
+  {
+   "id": 23,
+   "boardId": 7,
+   "name": "Sprint 23",
+   "state": "closed",
+   "startDate": "2026-08-18T09:00:00.000Z",
+   "endDate": "2026-08-31T17:00:00.000Z",
+   "completeDate": "2026-08-31T17:00:00.000Z"
+  },
+  {
+   "id": 24,
+   "boardId": 7,
+   "name": "Sprint 24",
+   "state": "closed",
+   "startDate": "2026-09-01T09:00:00.000Z",
+   "endDate": "2026-09-14T17:00:00.000Z",
+   "completeDate": "2026-09-14T17:00:00.000Z"
+  },
+  {
+   "id": 25,
+   "boardId": 7,
+   "name": "Sprint 25",
+   "state": "active",
+   "startDate": "2026-09-15T09:00:00.000Z",
+   "endDate": "2026-09-28T17:00:00.000Z"
+  },
+  {
+   "id": 26,
+   "boardId": 7,
+   "name": "Sprint 26",
+   "state": "future"
+  }
+ ],
+ "issues": [
+  {
+   "id": "30001",
+   "key": "APP-142",
+   "sprintId": 25,
+   "closedSprintIds": [],
+   "fields": {
+    "summary": "Improve error messages for session timeouts",
+    "project": {
+     "id": "20000",
+     "key": "APP",
+     "name": "Platform Delivery"
+    },
+    "issuetype": {
+     "id": "1",
+     "name": "Bug"
+    },
+    "priority": {
+     "id": "3",
+     "name": "Medium"
+    },
+    "status": {
+     "id": "10000",
+     "name": "To Do",
+     "statusCategory": {
+      "key": "new",
+      "name": "To Do"
+     }
+    },
+    "assignee": {
+     "accountId": "fixture-user-1",
+     "displayName": "Jon Doe"
+    },
+    "labels": [],
+    "created": "2026-09-01T09:00:00.000+0000",
+    "updated": "2026-09-15T09:00:00.000+0000",
+    "description": {
+     "type": "doc",
+     "version": 1,
+     "content": [
+      {
+       "type": "paragraph",
+       "content": [
+        {
+         "type": "text",
+         "text": "Timeout errors should say which session and why."
+        }
+       ]
+      }
+     ]
+    }
+   }
+  },
+  {
+   "id": "30002",
+   "key": "APP-146",
+   "sprintId": 25,
+   "closedSprintIds": [],
+   "fields": {
+    "summary": "Add analytics for drop-file usage",
+    "project": {
+     "id": "20000",
+     "key": "APP",
+     "name": "Platform Delivery"
+    },
+    "issuetype": {
+     "id": "3",
+     "name": "Feature"
+    },
+    "priority": {
+     "id": "4",
+     "name": "Low"
+    },
+    "status": {
+     "id": "10000",
+     "name": "To Do",
+     "statusCategory": {
+      "key": "new",
+      "name": "To Do"
+     }
+    },
+    "assignee": {
+     "accountId": "u-mk",
+     "displayName": "Mia King"
+    },
+    "labels": [],
+    "created": "2026-09-01T09:00:00.000+0000",
+    "updated": "2026-09-15T09:00:00.000+0000",
+    "description": {
+     "type": "doc",
+     "version": 1,
+     "content": [
+      {
+       "type": "paragraph",
+       "content": [
+        {
+         "type": "text",
+         "text": "Count how often files are dropped into terminals."
+        }
+       ]
+      }
+     ]
+    }
+   }
+  },
+  {
+   "id": "30003",
+   "key": "APP-149",
+   "sprintId": 25,
+   "closedSprintIds": [],
+   "fields": {
+    "summary": "Document session resume flow",
+    "project": {
+     "id": "20000",
+     "key": "APP",
+     "name": "Platform Delivery"
+    },
+    "issuetype": {
+     "id": "4",
+     "name": "Docs"
+    },
+    "priority": {
+     "id": "4",
+     "name": "Low"
+    },
+    "status": {
+     "id": "10000",
+     "name": "To Do",
+     "statusCategory": {
+      "key": "new",
+      "name": "To Do"
+     }
+    },
+    "assignee": {
+     "accountId": "u-al",
+     "displayName": "Ana Lopez"
+    },
+    "labels": [],
+    "created": "2026-09-01T09:00:00.000+0000",
+    "updated": "2026-09-15T09:00:00.000+0000",
+    "description": {
+     "type": "doc",
+     "version": 1,
+     "content": [
+      {
+       "type": "paragraph",
+       "content": [
+        {
+         "type": "text",
+         "text": "Write the resume flow down for the team."
+        }
+       ]
+      }
+     ]
+    }
+   }
+  },
+  {
+   "id": "30004",
+   "key": "APP-130",
+   "sprintId": 25,
+   "closedSprintIds": [],
+   "fields": {
+    "summary": "Refactor workspace initialization",
+    "project": {
+     "id": "20000",
+     "key": "APP",
+     "name": "Platform Delivery"
+    },
+    "issuetype": {
+     "id": "2",
+     "name": "Task"
+    },
+    "priority": {
+     "id": "3",
+     "name": "Medium"
+    },
+    "status": {
+     "id": "3",
+     "name": "In Progress",
+     "statusCategory": {
+      "key": "indeterminate",
+      "name": "In Progress"
+     }
+    },
+    "assignee": {
+     "accountId": "u-sk",
+     "displayName": "Sara Kim"
+    },
+    "labels": [],
+    "created": "2026-09-01T09:00:00.000+0000",
+    "updated": "2026-09-15T09:00:00.000+0000",
+    "description": {
+     "type": "doc",
+     "version": 1,
+     "content": [
+      {
+       "type": "paragraph",
+       "content": [
+        {
+         "type": "text",
+         "text": "Split the workspace bootstrap into steps."
+        }
+       ]
+      }
+     ]
+    }
+   }
+  },
+  {
+   "id": "30005",
+   "key": "APP-128",
+   "sprintId": 25,
+   "closedSprintIds": [
+    24
+   ],
+   "fields": {
+    "summary": "Handle session resume after PR review",
+    "project": {
+     "id": "20000",
+     "key": "APP",
+     "name": "Platform Delivery"
+    },
+    "issuetype": {
+     "id": "2",
+     "name": "Task"
+    },
+    "priority": {
+     "id": "3",
+     "name": "Medium"
+    },
+    "status": {
+     "id": "10100",
+     "name": "In Review",
+     "statusCategory": {
+      "key": "indeterminate",
+      "name": "In Progress"
+     }
+    },
+    "assignee": {
+     "accountId": "fixture-user-1",
+     "displayName": "Jon Doe"
+    },
+    "labels": [],
+    "created": "2026-09-01T09:00:00.000+0000",
+    "updated": "2026-09-15T09:00:00.000+0000",
+    "description": {
+     "type": "doc",
+     "version": 1,
+     "content": [
+      {
+       "type": "paragraph",
+       "content": [
+        {
+         "type": "text",
+         "text": "Ensure sessions can be resumed seamlessly after a PR has been reviewed, including context restoration and state syncing."
+        }
+       ]
+      }
+     ]
+    }
+   }
+  },
+  {
+   "id": "30006",
+   "key": "APP-135",
+   "sprintId": 25,
+   "closedSprintIds": [],
+   "fields": {
+    "summary": "Validate release build",
+    "project": {
+     "id": "20000",
+     "key": "APP",
+     "name": "Platform Delivery"
+    },
+    "issuetype": {
+     "id": "2",
+     "name": "Task"
+    },
+    "priority": {
+     "id": "2",
+     "name": "High"
+    },
+    "status": {
+     "id": "10101",
+     "name": "QA",
+     "statusCategory": {
+      "key": "indeterminate",
+      "name": "In Progress"
+     }
+    },
+    "assignee": {
+     "accountId": "u-mk",
+     "displayName": "Mia King"
+    },
+    "labels": [],
+    "created": "2026-09-01T09:00:00.000+0000",
+    "updated": "2026-09-15T09:00:00.000+0000",
+    "description": {
+     "type": "doc",
+     "version": 1,
+     "content": [
+      {
+       "type": "paragraph",
+       "content": [
+        {
+         "type": "text",
+         "text": "Run the release checklist."
+        }
+       ]
+      }
+     ]
+    }
+   }
+  },
+  {
+   "id": "30007",
+   "key": "APP-110",
+   "sprintId": null,
+   "closedSprintIds": [
+    24
+   ],
+   "fields": {
+    "summary": "Add telemetry for drop-files",
+    "project": {
+     "id": "20000",
+     "key": "APP",
+     "name": "Platform Delivery"
+    },
+    "issuetype": {
+     "id": "3",
+     "name": "Feature"
+    },
+    "priority": {
+     "id": "4",
+     "name": "Low"
+    },
+    "status": {
+     "id": "10001",
+     "name": "Done",
+     "statusCategory": {
+      "key": "done",
+      "name": "Done"
+     }
+    },
+    "assignee": {
+     "accountId": "u-al",
+     "displayName": "Ana Lopez"
+    },
+    "labels": [],
+    "created": "2026-09-01T09:00:00.000+0000",
+    "updated": "2026-09-15T09:00:00.000+0000",
+    "description": {
+     "type": "doc",
+     "version": 1,
+     "content": [
+      {
+       "type": "paragraph",
+       "content": [
+        {
+         "type": "text",
+         "text": "Telemetry events for drop-files."
+        }
+       ]
+      }
+     ]
+    }
+   }
+  },
+  {
+   "id": "30008",
+   "key": "APP-117",
+   "sprintId": null,
+   "closedSprintIds": [
+    24
+   ],
+   "fields": {
+    "summary": "Update docs for workspace setup",
+    "project": {
+     "id": "20000",
+     "key": "APP",
+     "name": "Platform Delivery"
+    },
+    "issuetype": {
+     "id": "4",
+     "name": "Docs"
+    },
+    "priority": {
+     "id": "4",
+     "name": "Low"
+    },
+    "status": {
+     "id": "10001",
+     "name": "Done",
+     "statusCategory": {
+      "key": "done",
+      "name": "Done"
+     }
+    },
+    "assignee": {
+     "accountId": "u-jm",
+     "displayName": "Juan Mora"
+    },
+    "labels": [],
+    "created": "2026-09-01T09:00:00.000+0000",
+    "updated": "2026-09-15T09:00:00.000+0000",
+    "description": {
+     "type": "doc",
+     "version": 1,
+     "content": [
+      {
+       "type": "paragraph",
+       "content": [
+        {
+         "type": "text",
+         "text": "Refresh the setup guide."
+        }
+       ]
+      }
+     ]
+    }
+   }
+  },
+  {
+   "id": "30009",
+   "key": "APP-122",
+   "sprintId": null,
+   "closedSprintIds": [
+    24
+   ],
+   "fields": {
+    "summary": "Clarify retry strategy",
+    "project": {
+     "id": "20000",
+     "key": "APP",
+     "name": "Platform Delivery"
+    },
+    "issuetype": {
+     "id": "2",
+     "name": "Task"
+    },
+    "priority": {
+     "id": "3",
+     "name": "Medium"
+    },
+    "status": {
+     "id": "10000",
+     "name": "To Do",
+     "statusCategory": {
+      "key": "new",
+      "name": "To Do"
+     }
+    },
+    "assignee": {
+     "accountId": "u-al",
+     "displayName": "Ana Lopez"
+    },
+    "labels": [],
+    "created": "2026-09-01T09:00:00.000+0000",
+    "updated": "2026-09-15T09:00:00.000+0000",
+    "description": {
+     "type": "doc",
+     "version": 1,
+     "content": [
+      {
+       "type": "paragraph",
+       "content": [
+        {
+         "type": "text",
+         "text": "Decide how retries back off."
+        }
+       ]
+      }
+     ]
+    }
+   }
+  },
+  {
+   "id": "30010",
+   "key": "APP-101",
+   "sprintId": null,
+   "closedSprintIds": [
+    23
+   ],
+   "fields": {
+    "summary": "Improve workspace switching performance",
+    "project": {
+     "id": "20000",
+     "key": "APP",
+     "name": "Platform Delivery"
+    },
+    "issuetype": {
+     "id": "5",
+     "name": "Improvement"
+    },
+    "priority": {
+     "id": "3",
+     "name": "Medium"
+    },
+    "status": {
+     "id": "10001",
+     "name": "Done",
+     "statusCategory": {
+      "key": "done",
+      "name": "Done"
+     }
+    },
+    "assignee": {
+     "accountId": "u-al",
+     "displayName": "Ana Lopez"
+    },
+    "labels": [],
+    "created": "2026-09-01T09:00:00.000+0000",
+    "updated": "2026-09-15T09:00:00.000+0000",
+    "description": {
+     "type": "doc",
+     "version": 1,
+     "content": [
+      {
+       "type": "paragraph",
+       "content": [
+        {
+         "type": "text",
+         "text": "Faster switching."
+        }
+       ]
+      }
+     ]
+    }
+   }
+  },
+  {
+   "id": "30011",
+   "key": "APP-150",
+   "sprintId": null,
+   "closedSprintIds": [],
+   "fields": {
+    "summary": "Investigate flaky sync test",
+    "project": {
+     "id": "20000",
+     "key": "APP",
+     "name": "Platform Delivery"
+    },
+    "issuetype": {
+     "id": "1",
+     "name": "Bug"
+    },
+    "priority": {
+     "id": "2",
+     "name": "High"
+    },
+    "status": {
+     "id": "10000",
+     "name": "To Do",
+     "statusCategory": {
+      "key": "new",
+      "name": "To Do"
+     }
+    },
+    "assignee": null,
+    "labels": [],
+    "created": "2026-09-01T09:00:00.000+0000",
+    "updated": "2026-09-15T09:00:00.000+0000",
+    "description": {
+     "type": "doc",
+     "version": 1,
+     "content": [
+      {
+       "type": "paragraph",
+       "content": [
+        {
+         "type": "text",
+         "text": "Backlog item not in any sprint."
+        }
+       ]
+      }
+     ]
+    }
+   }
+  }
+ ],
+ "createmeta": {
+  "issueTypes": [
+   {
+    "id": "1",
+    "name": "Bug",
+    "subtask": false
+   },
+   {
+    "id": "2",
+    "name": "Task",
+    "subtask": false
+   },
+   {
+    "id": "3",
+    "name": "Feature",
+    "subtask": false
+   },
+   {
+    "id": "99",
+    "name": "Sub-task",
+    "subtask": true
+   }
+  ]
+ }
+}
