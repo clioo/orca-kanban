@@ -8,7 +8,7 @@ out="$root/dist/clioo.work-board"
 cargo build --release --manifest-path "$root/service/Cargo.toml" --target-dir "$root/service/target"
 rm -rf "$out" && mkdir -p "$out/bin"
 cp "$root/plugin/orca-plugin.json" "$root/plugin/worker.mjs" "$root/LICENSE" "$root/THIRD_PARTY_NOTICES.md" "$out/"
-cp "$root/service/target/release/work-board-svc" "$out/bin/"
+cp "$root/service/target/release/work-board-svc" "$root/plugin/orca-rpc.cjs" "$out/bin/"
 cp -R "$root/web/dist" "$out/web"
 codesign --verify "$out/bin/work-board-svc"
 # The plugin's version, the service's and the UI's are one release.

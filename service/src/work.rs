@@ -41,7 +41,7 @@ pub(crate) const SCHEMA_COMPONENT: &str = "work";
 /// sources the owner allows and their connections (Linear, GitHub). v4: a
 /// board can keep importing new issues assigned to the owner. v5: columns
 /// can be collapsed. v6: the workspace made for a ticket, where its New
-/// session starts. v7: an imported board can target an existing workspace.
+/// session starts. v7: a board workspace column (retired, unused).
 pub(crate) const SCHEMA_VERSION: i64 = 7;
 
 /// How often a watched pull request is re-read (`gh pr view`).
@@ -150,6 +150,8 @@ pub(crate) fn apply_pending_steps_in_tx(tx: &Transaction) -> rusqlite::Result<()
         )?;
     }
     if existing.unwrap_or(0) < 7 {
+        // 0.2.1's board workspace default. Retired in 0.2.2 (agents work in
+        // a repo or a folder project); kept so a 0.2.1 database opens as is.
         add_column(tx, "work_boards", "workspace_id", "TEXT")?;
     }
     tx.execute(
@@ -1187,11 +1189,15 @@ impl Engine {
                 })
                 .collect();
             let mut stmt = conn
-                .prepare("SELECT id, name FROM projects ORDER BY name COLLATE NOCASE")
+                .prepare("SELECT id, name, kind FROM projects ORDER BY name COLLATE NOCASE")
                 .map_err(error::from_sqlite)?;
             let projects = stmt
                 .query_map([], |r| {
-                    Ok(json!({ "id": r.get::<_, String>(0)?, "name": r.get::<_, String>(1)? }))
+                    Ok(json!({
+                        "id": r.get::<_, String>(0)?,
+                        "name": r.get::<_, String>(1)?,
+                        "kind": r.get::<_, String>(2)?,
+                    }))
                 })
                 .map_err(error::from_sqlite)?
                 .collect::<Result<Vec<_>, _>>()
@@ -1635,6 +1641,21 @@ impl Engine {
         if let Some(workspace) = clearable(params, "workspaceId")? {
             if let Some(id) = &workspace {
                 require_workspace(&conn, id)?;
+                // A workspace belongs to one project: choosing it moves the
+                // ticket there, unless this call also names the project.
+                if params.get("projectId").is_none()
+                    && let Some(owner) = conn
+                        .query_row(
+                            "SELECT project_id FROM workspaces WHERE id = ?1",
+                            params![id],
+                            |r| r.get::<_, Option<String>>(0),
+                        )
+                        .optional()
+                        .map_err(error::from_sqlite)?
+                        .flatten()
+                {
+                    ticket.project_id = Some(owner);
+                }
             }
             ticket.workspace_id = workspace;
         }
@@ -2004,11 +2025,26 @@ impl Engine {
             .unwrap_or_else(|| "claude".to_string())
     }
 
-    /// Explicit ticket locations win over the board default. A stale board
-    /// choice fails closed rather than launching in a different checkout.
+    /// The workspace chosen for the ticket (Links → Workspace). One that is
+    /// gone fails closed rather than launching in a different checkout.
     fn configured_ticket_workspace(&self, ticket: &Ticket) -> Result<Option<String>, RpcError> {
         let conn = self.db.lock().unwrap();
         if let Some(ws) = &ticket.workspace_id {
+            // One recorded under the ticket's previous project (the board
+            // moved, or the project was changed) is not where it works now.
+            let owner: Option<Option<String>> = conn
+                .query_row(
+                    "SELECT project_id FROM workspaces WHERE id = ?1",
+                    params![ws],
+                    |r| r.get(0),
+                )
+                .optional()
+                .map_err(error::from_sqlite)?;
+            if let (Some(project), Some(Some(owner))) = (&ticket.project_id, &owner)
+                && project != owner
+            {
+                return Ok(None);
+            }
             let active = conn
                 .query_row(
                     "SELECT 1 FROM workspaces WHERE id = ?1 AND is_archived = 0",
@@ -2032,28 +2068,6 @@ impl Engine {
                 ));
             }
         }
-        if let Some(id) = &ticket.ext.board_id {
-            let board = sync::get_board(&conn, id)?;
-            if (ticket.project_id.is_none() || ticket.project_id == board.project_id)
-                && let Some(ws) = board.workspace_id
-            {
-                let active = conn
-                    .query_row(
-                        "SELECT 1 FROM workspaces WHERE id = ?1 AND is_archived = 0",
-                        params![ws],
-                        |_| Ok(()),
-                    )
-                    .optional()
-                    .map_err(error::from_sqlite)?
-                    .is_some();
-                if !active {
-                    return Err(error::invalid_argument(
-                        "The board's workspace is unavailable. Choose another workspace in Agents work in.",
-                    ));
-                }
-                return Ok(Some(ws));
-            }
-        }
         Ok(None)
     }
 
@@ -2066,6 +2080,21 @@ impl Engine {
         let Some(project) = &ticket.project_id else {
             return Ok(None);
         };
+        let folder_group = {
+            let conn = self.db.lock().unwrap();
+            conn.query_row(
+                "SELECT kind FROM projects WHERE id = ?1",
+                params![project],
+                |r| r.get::<_, String>(0),
+            )
+            .optional()
+            .map_err(error::from_sqlite)?
+            .is_some_and(|k| k == "folder-group")
+        };
+        if folder_group {
+            // No checkout to share: each ticket has its own folder workspace.
+            return self.ticket_own_workspace(ticket);
+        }
         let conn = self.db.lock().unwrap();
         let worktree = conn
             .query_row(

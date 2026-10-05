@@ -83,7 +83,6 @@ export type WorkBoardSummary = {
   projectKey?: string | null;
   projectName?: string | null;
   projectId?: string | null;
-  workspaceId?: string | null;
   statuses: WorkBoardStatus[];
   lastSyncedAt?: number | null;
   lastSyncError?: string | null;
@@ -200,7 +199,7 @@ export type WorkTicket = {
 export type WorkBoard = {
   columns: WorkColumn[];
   tickets: WorkTicket[];
-  projects: { id: string; name: string }[];
+  projects: { id: string; name: string; kind?: string }[];
   /** The board shown (absent from a daemon without imported boards). */
   board?: WorkBoardSummary;
   boards?: WorkBoardSummary[];
@@ -415,7 +414,7 @@ export interface WorkBridge {
   boardSync(input: { boardId: string }): Promise<Result<WorkSyncResult>>;
   boardPush(input: { boardId: string }): Promise<Result<{ results: WorkPushResult[]; pushed: number; failed: number }>>;
   boardDelete(input: { boardId: string }): Promise<Result<{ deleted: string; name: string; tickets: number }>>;
-  boardUpdate(input: { boardId: string; autoImportMine?: boolean; projectId?: string | null; workspaceId?: string | null }): Promise<Result<WorkBoardSummary>>;
+  boardUpdate(input: { boardId: string; autoImportMine?: boolean; projectId?: string | null }): Promise<Result<WorkBoardSummary>>;
   ticketPush(input: { ticketId: string }): Promise<Result<WorkPushResult>>;
   ticketResolve(input: { ticketId: string; keep: "theirs" | "ours" }): Promise<Result<WorkTicket>>;
   ticketSprint(input: { ticketId: string; to: string }): Promise<Result<WorkTicket>>;
@@ -507,7 +506,6 @@ export const workTicketSchema = z.looseObject({
 });
 const boardSummarySchema = z.looseObject({
   projectId: z.string().nullable().optional(),
-  workspaceId: z.string().nullable().optional(),
   id: z.string(),
   provider: z.string().nullable(),
   name: z.string(),

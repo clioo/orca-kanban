@@ -7,6 +7,13 @@
 //
 //   repo list · worktree list · worktree ps · worktree create
 //   terminal list · terminal create · terminal send · terminal switch
+//   rpc <method> <json>: the runtime methods the board reaches through
+//   Orca's own client (projectGroup.list, folderWorkspace.create/list).
+//
+// Folder projects are `projectGroups` ({id, name, parentPath}) and their
+// folder workspaces `folderWorkspaces` ({id, projectGroupId, name,
+// folderPath, isArchived}); `worktree ps` lists those as `folder:<id>`,
+// as Orca does. `"noRuntime": true` makes every rpc call fail.
 //
 // A state with `"failing": true` answers every call with an error, like an
 // Orca that cannot be reached.
@@ -18,6 +25,8 @@ const state = existsSync(statePath)
   ? JSON.parse(readFileSync(statePath, "utf8"))
   : { repos: [], worktrees: [], terminals: [], agents: {}, calls: [], counter: 0 };
 state.terminals ??= [];
+state.projectGroups ??= [];
+state.folderWorkspaces ??= [];
 state.agents ??= {};
 state.calls ??= [];
 
@@ -54,6 +63,42 @@ const AGENTS = { claude: "claude", codex: "codex", opencode: "opencode", pi: "pi
 
 if (state.failing) fail("runtime_unavailable", "Orca is not running");
 
+const folderWorkspaceIds = () => state.folderWorkspaces.map((f) => `folder:${f.id}`);
+const agentsIn = (worktreeId) =>
+  state.terminals
+    .filter((t) => t.live && t.worktreeId === worktreeId && state.agents[`${t.tabId}:${t.leafId}`])
+    .map((t) => ({ paneKey: `${t.tabId}:${t.leafId}`, ...state.agents[`${t.tabId}:${t.leafId}`] }));
+
+if (words[0] === "rpc") {
+  const method = words[1];
+  const params = words[2] ? JSON.parse(words[2]) : {};
+  state.calls[state.calls.length - 1] = { command: `rpc ${method}`, flags: params };
+  if (state.noRuntime) fail("unsupported", "no runtime client");
+  switch (method) {
+    case "projectGroup.list":
+      reply({ groups: state.projectGroups });
+    case "folderWorkspace.list":
+      reply({ folderWorkspaces: state.folderWorkspaces });
+    case "folderWorkspace.create": {
+      const group = state.projectGroups.find((g) => g.id === params.projectGroupId);
+      if (!group) fail("invalid_argument", "Folder-backed project group not found.");
+      state.counter = (state.counter ?? 0) + 1;
+      const folderWorkspace = {
+        id: `fw-${state.counter}`,
+        projectGroupId: group.id,
+        name: params.name ?? "Workspace",
+        folderPath: group.parentPath,
+        isArchived: false,
+        createdAt: Date.now(),
+      };
+      state.folderWorkspaces.push(folderWorkspace);
+      reply({ folderWorkspace });
+    }
+    default:
+      fail("method_not_found", `Unknown method: ${method}`);
+  }
+}
+
 switch (command) {
   case "repo list":
     reply({ repos: state.repos });
@@ -61,12 +106,23 @@ switch (command) {
     reply({ worktrees: state.worktrees, totalCount: state.worktrees.length, truncated: false });
   case "worktree ps":
     reply({
-      worktrees: state.worktrees.map((w) => ({
-        worktreeId: w.id,
-        agents: state.terminals
-          .filter((t) => t.live && t.worktreeId === w.id && state.agents[`${t.tabId}:${t.leafId}`])
-          .map((t) => ({ paneKey: `${t.tabId}:${t.leafId}`, ...state.agents[`${t.tabId}:${t.leafId}`] })),
-      })),
+      worktrees: [
+        ...state.worktrees.map((w) => ({ workspaceKind: "git", worktreeId: w.id, agents: agentsIn(w.id) })),
+        ...state.folderWorkspaces.map((f) => {
+          const group = state.projectGroups.find((g) => g.id === f.projectGroupId);
+          return {
+            workspaceKind: "folder-workspace",
+            worktreeId: `folder:${f.id}`,
+            repoId: `folder-workspace:${f.projectGroupId}`,
+            repo: group?.name ?? "",
+            path: f.folderPath,
+            displayName: f.name,
+            isArchived: f.isArchived === true,
+            createdAt: f.createdAt ?? 0,
+            agents: agentsIn(`folder:${f.id}`),
+          };
+        }),
+      ],
     });
   case "worktree create": {
     const repo = state.repos.find((r) => r.id === selected(flags.repo));
@@ -91,7 +147,7 @@ switch (command) {
     reply({ terminals: state.terminals.filter((t) => t.live).map(({ inputs, command, live, ...t }) => t) });
   case "terminal create": {
     const worktreeId = selected(flags.worktree);
-    if (!state.worktrees.some((w) => w.id === worktreeId)) fail("selector_not_found", "selector_not_found");
+    if (!state.worktrees.some((w) => w.id === worktreeId) && !folderWorkspaceIds().includes(worktreeId)) fail("selector_not_found", "selector_not_found");
     state.counter = (state.counter ?? 0) + 1;
     const n = state.counter;
     const terminal = {

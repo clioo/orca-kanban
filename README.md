@@ -33,13 +33,13 @@ No Node.js, Rust, or local compilation is required for this distribution.
 In **Orca → Settings → Plugins → Install plugin → Git URL**, paste:
 
 ```text
-https://github.com/clioo/orca-kanban.git#macos-arm64-v0.2.1
+https://github.com/clioo/orca-kanban.git#macos-arm64-v0.2.2
 ```
 
 Click **Install**, review the permissions, then enable the plugin. Press
 **Command + J** and run **Open Work board**.
 
-The `#macos-arm64-v0.2.1` tag contains the compiled plugin at the repository
+The `#macos-arm64-v0.2.2` tag contains the compiled plugin at the repository
 root. The default `main` branch contains source code and is **not** directly
 installable. Keep the `#tag` suffix: Orca requires a pinned tag or commit.
 This package is for M-series Macs only, not Intel Macs, Windows, or Linux.
@@ -137,21 +137,27 @@ is not automatically added to your shell's `PATH`.
 
 ### Agent sessions
 
-On an imported board, use the **Repository** and **Workspace** selectors below
-the toolbar to choose an existing Orca worktree. Picking a workspace can infer
-its repository; the workspace list is scoped to the selected repository.
-**Repository default** keeps the existing per-ticket checkout behavior for
-manual new sessions.
+**Agents work in** (on an imported board's notice, or **Sync options → Agents
+work in**) is one picker with your Orca **repositories** and your Orca
+**folder projects**, such as a `pre-sales` folder project with one folder
+workspace per ticket:
 
-The board default applies to new sessions on tickets without their own
-workspace. Ticket-specific locations take precedence, and existing sessions
-are not moved. An archived or removed selected workspace produces an error
-rather than silently launching in another checkout.
+- In a repository, a ticket's **New session** gets its own git worktree.
+- In a folder project, a ticket works in its own folder workspace: one already
+  named for its key (`MODPRESALE-1149`, `MODPRESALE-1149-…`), else a new one
+  named `<key> <title>`.
+- A workspace chosen for the ticket (**Links → Workspace**) wins; one that is
+  archived or removed produces an error rather than a launch elsewhere.
 
-Version 0.2.1 adds a nullable workspace field to the local database. Before
-upgrading an older schema, the service makes an owner-readable backup named
-`work-board-before-v7-<id>.db` in its data directory. Older plugin versions
-cannot open the upgraded database; do not downgrade without restoring a backup.
+Folder projects and folder workspaces have no `orca` CLI command; the plugin
+reaches them through Orca's own runtime client (`bin/orca-rpc.cjs`, run by
+Orca's bundled Node). Without it, folder projects that already have a folder
+workspace still appear and existing ones are used, but new ones are not made.
+
+Upgrading from 0.2.0 adds a field to the local database; first the service
+makes an owner-readable backup, `work-board-before-v7-<id>.db`, in its data
+directory. 0.2.0 cannot open the upgraded database: restore that backup
+before downgrading.
 
 Launches use Orca's agent settings. Claude sessions started by the board retain
 an explicit conversation ID for exact resume. Other supported agents, and
@@ -206,7 +212,7 @@ pnpm --dir web exec playwright-core install chromium
 ./scripts/test-all.sh
 
 # Verify the public Git distribution through Orca's real installer.
-WORK_BOARD_INSTALL_GIT=https://github.com/clioo/orca-kanban.git#macos-arm64-v0.2.1 \
+WORK_BOARD_INSTALL_GIT=https://github.com/clioo/orca-kanban.git#macos-arm64-v0.2.2 \
   node tests/e2e/accept-orca.mjs
 
 # Regenerate screenshots from synthetic data; build the plugin first.

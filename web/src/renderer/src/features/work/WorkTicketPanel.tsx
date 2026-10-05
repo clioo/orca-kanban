@@ -55,6 +55,7 @@ import {
   ticketDisplayKey,
 } from "./work-sources";
 import { WorkSyncActions, type WorkSyncHandlers } from "./WorkSyncActions";
+import { ProjectOptions } from "./work-projects";
 import { type LinkCandidates, unreadableNotice } from "./work-session-candidates";
 
 export type WorkWorkspace = { id: string; name: string; projectId?: string | null; path?: string };
@@ -673,11 +674,7 @@ export function WorkTicketPanel({
               onChange={(event) => void update({ projectId: event.target.value || null })}
             >
               <option value="">No project</option>
-              {board.projects.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
+              <ProjectOptions projects={board.projects} />
             </select>
             <span className="text-xs text-muted-foreground">Workspace</span>
             <select

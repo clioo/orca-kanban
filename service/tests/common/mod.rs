@@ -9,7 +9,7 @@ use std::path::{Path, PathBuf};
 
 use serde_json::{Value, json};
 use work_board_svc::Engine;
-use work_board_svc::orca::Orca;
+use work_board_svc::orca::{Orca, RpcRunner};
 
 pub fn node() -> String {
     std::env::var("WORK_BOARD_NODE").unwrap_or_else(|_| "node".to_string())
@@ -61,8 +61,12 @@ impl Board {
             "terminals": [], "agents": {}, "calls": [], "counter": 0
         });
         std::fs::write(user_data.join("fake-orca.json"), state.to_string()).unwrap();
-        let engine =
-            Engine::open(&root.path().join("data"), Orca::new(cli, user_data.clone())).unwrap();
+        let orca = Orca::new(cli.clone(), user_data.clone()).with_rpc(RpcRunner {
+            program: cli,
+            prefix: vec!["rpc".to_string()],
+            env: Vec::new(),
+        });
+        let engine = Engine::open(&root.path().join("data"), orca).unwrap();
         Board {
             root,
             engine,

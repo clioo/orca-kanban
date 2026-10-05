@@ -1514,140 +1514,197 @@ fn jira_connects_in_sources_with_a_sealed_token_and_disconnects() {
     );
 }
 
+/// A folder project like Orca's `pre-sales`: a project group on a folder,
+/// with one folder workspace already named for APP-128.
+fn add_folder_project(b: &Board) -> String {
+    b.ctx.board.edit(|state| {
+        state["projectGroups"] = json!([{ "id": "g-presales", "name": "pre-sales", "parentPath": "/fixture/pre-sales" }]);
+        state["folderWorkspaces"] = json!([
+            { "id": "fw-existing", "projectGroupId": "g-presales", "name": "APP-128-session-resume", "folderPath": "/fixture/pre-sales", "isArchived": false },
+            { "id": "fw-other", "projectGroupId": "g-presales", "name": "Landing page", "folderPath": "/fixture/pre-sales", "isArchived": false }
+        ]);
+    });
+    b.ctx.board.engine.refresh_mirror(true);
+    "folder-workspace:g-presales".to_string()
+}
+
 #[test]
-fn a_board_workspace_routes_manual_and_prompt_sessions_without_making_a_worktree() {
+fn a_folder_project_is_where_agents_work_and_each_ticket_gets_its_folder_workspace() {
     let b = Board::imported();
-    let ws = b.ctx.ok("orca.workspaces", json!({}))["workspaces"]
+    let presales = add_folder_project(&b);
+    // It is one of the projects the board offers, beside the repos.
+    let projects = b.view(None)["projects"].clone();
+    let offered = projects
         .as_array()
         .unwrap()
         .iter()
-        .find(|w| w["projectId"] == b.project_id)
-        .unwrap()["id"]
-        .as_str()
-        .unwrap()
-        .to_string();
-    let chosen = format!("{}::/fixture/review", b.project_id);
-    b.ctx.board.edit(|state| {
-        state["worktrees"].as_array_mut().unwrap().push(json!({
-            "id": chosen, "repoId": b.project_id, "path": "/fixture/review",
-            "displayName": "review", "isMainWorktree": false, "isArchived": false, "createdAt": 2
-        }));
-    });
-    b.ctx.board.engine.refresh_mirror(true);
+        .find(|p| p["id"] == presales.as_str())
+        .cloned()
+        .expect("pre-sales offered");
+    assert_eq!(offered["name"], "pre-sales");
+    assert_eq!(offered["kind"], "folder-group");
     let updated = b.ctx.ok(
         "work.board_update",
-        json!({"boardId": b.board_id, "workspaceId": chosen}),
+        json!({"boardId": b.board_id, "projectId": presales}),
     );
-    assert_eq!(updated["workspaceId"], chosen);
-    assert_eq!(updated["projectId"], b.project_id);
-    // Every new or imported ticket reads the default dynamically.
-    assert!(b.ticket("APP-142")["workspaceId"].is_null());
-    let before = b.ctx.board.state()["worktrees"].as_array().unwrap().len();
+    assert_eq!(updated["projectId"], presales.as_str());
+    assert!(
+        updated.get("workspaceId").is_none(),
+        "no second, per-worktree setting"
+    );
+    assert_eq!(b.ticket("APP-142")["projectId"], presales.as_str());
+
+    // APP-128 worked in the Drogon repo before the board moved to pre-sales:
+    // that recorded workspace is not where it works now.
+    let main = b.ctx.board.main_worktree();
+    let before = b.ctx.ok(
+        "work.ticket_update",
+        json!({"ticketId": "APP-128", "workspaceId": main}),
+    );
+    assert_eq!(
+        before["projectId"], "repo-drogon",
+        "a chosen workspace brings its project"
+    );
+    b.ctx.ok(
+        "work.ticket_update",
+        json!({"ticketId": "APP-128", "projectId": presales}),
+    );
+    // A ticket whose folder workspace exists works there.
+    let started = b
+        .ctx
+        .ok("work.ticket_session_start", json!({"ticketId": "APP-128"}));
+    assert_eq!(started["session"]["workspaceId"], "folder:fw-existing");
+    assert_eq!(
+        b.ctx
+            .board
+            .terminal(started["session"]["id"].as_str().unwrap())["worktreeId"],
+        "folder:fw-existing"
+    );
+    // One without gets a new folder workspace named `<key> <title>`, reused next time.
     let started = b
         .ctx
         .ok("work.ticket_session_start", json!({"ticketId": "APP-142"}));
-    assert_eq!(started["session"]["workspaceId"], chosen);
-    let delivered = b.ctx.ok(
-        "work.column_send",
-        json!({"ticketId": "APP-128", "message": "Check the selected checkout"}),
-    );
-    let id = delivered["sends"][0]["results"][0]["newSessionId"]
+    let made = started["session"]["workspaceId"]
         .as_str()
-        .unwrap();
-    assert_eq!(b.ctx.board.terminal(id)["worktreeId"], chosen);
+        .unwrap()
+        .to_string();
+    let state = b.ctx.board.state();
+    let created = state["folderWorkspaces"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|f| format!("folder:{}", f["id"].as_str().unwrap()) == made)
+        .cloned()
+        .expect("a new folder workspace");
+    assert_eq!(created["projectGroupId"], "g-presales");
     assert_eq!(
-        b.ctx.board.state()["worktrees"].as_array().unwrap().len(),
-        before
+        created["name"],
+        "APP-142 Improve error messages for session timeouts"
     );
-    // Ticket overrides win, including the manual New session path.
-    b.ctx.ok(
-        "work.ticket_update",
-        json!({"ticketId": "APP-130", "workspaceId": ws}),
-    );
-    let explicit = b
+    let again = b
         .ctx
-        .ok("work.ticket_session_start", json!({"ticketId": "APP-130"}));
-    assert_eq!(explicit["session"]["workspaceId"], ws);
-    // Persisted independently of the engine, survives restart.
-    let reopened = work_board_svc::Engine::open(
-        &b.ctx.data_dir(),
-        work_board_svc::orca::Orca::new(
-            b.ctx.board.root.path().join("orca"),
-            b.ctx.board.user_data.clone(),
-        ),
-    )
-    .unwrap();
+        .ok("work.ticket_session_start", json!({"ticketId": "APP-142"}));
+    assert_eq!(again["session"]["workspaceId"], made.as_str());
     assert_eq!(
-        reopened
-            .dispatch("work.board", &json!({"boardId": b.board_id}))
-            .unwrap()["board"]["workspaceId"],
-        chosen
+        b.ctx.board.state()["folderWorkspaces"]
+            .as_array()
+            .unwrap()
+            .len(),
+        3
+    );
+    // A prompt that starts an agent goes to the ticket's folder workspace too, never a teammate's.
+    let sent = b.ctx.ok(
+        "work.column_send",
+        json!({"ticketId": "APP-130", "message": "Check APP-130"}),
+    );
+    let id = sent["sends"][0]["results"][0]["newSessionId"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    let ws = b.ctx.board.terminal(&id)["worktreeId"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    assert!(
+        ws.starts_with("folder:") && ws != "folder:fw-other" && ws != made,
+        "{ws}"
+    );
+    // Orca's terminals in folder workspaces link like any other.
+    let workspaces = b.ctx.ok("orca.workspaces", json!({}))["workspaces"].clone();
+    assert!(
+        workspaces
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|w| w["id"] == "folder:fw-other" && w["name"] == "pre-sales · Landing page")
     );
 }
 
 #[test]
-fn board_workspace_validation_is_atomic_and_clearing_project_clears_the_default() {
+fn without_orcas_runtime_helper_existing_folder_workspaces_still_work_and_a_missing_one_is_explained()
+ {
     let b = Board::imported();
-    let other_ws = b.ctx.board.main_worktree();
-    let before = b.view(None)["board"].clone();
-    let error = b.ctx.err("work.board_update", json!({"boardId": b.board_id, "projectId": b.project_id, "workspaceId": other_ws, "autoImportMine": true}));
-    assert!(error.message.contains("does not belong"));
-    assert_eq!(
-        b.view(None)["board"],
-        before,
-        "no partial update on mismatch"
+    let presales = add_folder_project(&b);
+    b.ctx.board.edit(|state| state["noRuntime"] = json!(true));
+    b.ctx.board.engine.refresh_mirror(true);
+    // Still offered: inferred from its folder workspaces.
+    let projects = b.view(None)["projects"].clone();
+    assert!(
+        projects
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|p| p["id"] == presales.as_str() && p["name"] == "pre-sales")
     );
-    let bad = b.ctx.err(
+    b.ctx.ok(
         "work.board_update",
-        json!({"boardId": b.board_id, "workspaceId": "unknown"}),
+        json!({"boardId": b.board_id, "projectId": presales}),
     );
-    assert!(bad.message.contains("unavailable"));
-    let changed = b.ctx.ok(
-        "work.board_update",
-        json!({"boardId": b.board_id, "workspaceId": other_ws}),
+    let started = b
+        .ctx
+        .ok("work.ticket_session_start", json!({"ticketId": "APP-128"}));
+    assert_eq!(started["session"]["workspaceId"], "folder:fw-existing");
+    let refused = b
+        .ctx
+        .err("work.ticket_session_start", json!({"ticketId": "APP-142"}));
+    assert!(
+        refused.message.contains("create one named APP-142 in Orca"),
+        "{}",
+        refused.message
     );
     assert_eq!(
-        changed["projectId"], "repo-drogon",
-        "choosing a workspace infers its repository"
+        b.ctx.board.terminals_created().len(),
+        1,
+        "nothing started in someone else's workspace"
     );
-    assert_eq!(b.ticket("APP-142")["projectId"], "repo-drogon");
+}
+
+#[test]
+fn a_tickets_chosen_workspace_wins_and_a_gone_one_is_never_replaced_silently() {
+    let b = Board::imported();
+    let main = b.ctx.board.main_worktree();
+    b.ctx.ok(
+        "work.ticket_update",
+        json!({"ticketId": "APP-130", "workspaceId": main}),
+    );
+    let explicit = b
+        .ctx
+        .ok("work.ticket_session_start", json!({"ticketId": "APP-130"}));
+    assert_eq!(explicit["session"]["workspaceId"], main.as_str());
     b.ctx.board.edit(|state| {
         for w in state["worktrees"].as_array_mut().unwrap() {
-            if w["id"] == other_ws {
+            if w["id"] == main.as_str() {
                 w["isArchived"] = json!(true);
             }
         }
     });
     b.ctx.board.engine.refresh_mirror(true);
+    let before = b.ctx.board.terminals_created().len();
     assert!(
         b.ctx
-            .err("work.ticket_session_start", json!({"ticketId": "APP-142"}))
+            .err("work.ticket_session_start", json!({"ticketId": "APP-130"}))
             .message
             .contains("unavailable")
     );
-    assert!(
-        b.ctx.board.terminals_created().is_empty(),
-        "never fall back silently to a different checkout"
-    );
-    assert!(
-        b.ctx
-            .err(
-                "work.board_update",
-                json!({"boardId": b.board_id, "workspaceId": other_ws})
-            )
-            .message
-            .contains("unavailable")
-    );
-    let cleared = b.ctx.ok(
-        "work.board_update",
-        json!({"boardId": b.board_id, "workspaceId": null}),
-    );
-    assert!(cleared["workspaceId"].is_null());
-    assert_eq!(cleared["projectId"], "repo-drogon");
-    let cleared = b.ctx.ok(
-        "work.board_update",
-        json!({"boardId": b.board_id, "projectId": null}),
-    );
-    assert!(cleared["projectId"].is_null());
-    assert!(cleared["workspaceId"].is_null());
+    assert_eq!(b.ctx.board.terminals_created().len(), before);
 }
