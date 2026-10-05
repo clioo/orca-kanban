@@ -50,6 +50,7 @@ pub(super) struct Board {
     pub project_key: Option<String>,
     pub project_name: Option<String>,
     pub project_id: Option<String>,
+    pub workspace_id: Option<String>,
     pub statuses: Vec<BoardStatus>,
     pub last_synced_at: Option<i64>,
     pub last_sync_error: Option<String>,
@@ -66,7 +67,7 @@ pub(super) struct Sprint {
     pub end: Option<String>,
 }
 
-const BOARD_SELECT: &str = "SELECT id, provider, site_id, site_url, external_id, name, kind, project_key, project_name, project_id, statuses, last_synced_at, last_sync_error, auto_import_mine FROM work_boards";
+const BOARD_SELECT: &str = "SELECT id, provider, site_id, site_url, external_id, name, kind, project_key, project_name, project_id, statuses, last_synced_at, last_sync_error, auto_import_mine, workspace_id FROM work_boards";
 
 fn board_from_row(r: &rusqlite::Row) -> rusqlite::Result<Board> {
     Ok(Board {
@@ -84,6 +85,7 @@ fn board_from_row(r: &rusqlite::Row) -> rusqlite::Result<Board> {
         last_synced_at: r.get(11)?,
         last_sync_error: r.get(12)?,
         auto_import_mine: r.get::<_, i64>(13)? != 0,
+        workspace_id: r.get(14)?,
     })
 }
 
@@ -499,6 +501,7 @@ pub(super) fn board_json(conn: &Connection, board: &Board) -> Result<Value, RpcE
         "projectKey": board.project_key,
         "projectName": board.project_name,
         "projectId": board.project_id,
+        "workspaceId": board.workspace_id,
         "statuses": board.statuses,
         "lastSyncedAt": board.last_synced_at,
         "lastSyncError": board.last_sync_error,
@@ -1972,38 +1975,69 @@ impl Engine {
         Ok(value)
     }
 
-    /// `work.board_update`: an imported board's own settings.
-    /// `projectId` is the Drogon project whose workspace the board's
-    /// sessions start in: it becomes the project of every ticket that had
-    /// none (or had the board's previous one), and of every ticket imported
-    /// later. `null` clears it.
+    /// Set the board's repository and optional existing Orca workspace.
+    /// Ticket overrides and running sessions are never relocated by this call.
     pub(crate) fn do_work_board_update(&self, params: &Value) -> Result<Value, RpcError> {
-        reject_unknown(params, &["boardId", "autoImportMine", "projectId"])?;
-        let conn = self.db.lock().unwrap();
-        let board = get_board(&conn, &required(params, "boardId")?)?;
-        if let Some(project) = super::clearable(params, "projectId")? {
-            let project = project.map(|p| resolve_project(&conn, &p)).transpose()?;
-            let now = crate::now_unix_ms() as i64;
-            conn.execute(
+        reject_unknown(
+            params,
+            &["boardId", "autoImportMine", "projectId", "workspaceId"],
+        )?;
+        let mut conn = self.db.lock().unwrap();
+        let tx = conn.transaction().map_err(error::from_sqlite)?;
+        let board = get_board(&tx, &required(params, "boardId")?)?;
+        let project_input = super::clearable(params, "projectId")?;
+        let workspace_input = super::clearable(params, "workspaceId")?;
+        let auto_import = bool_field(params, "autoImportMine")?;
+        let mut project = match project_input.clone() {
+            Some(project) => project.map(|p| resolve_project(&tx, &p)).transpose()?,
+            None => board.project_id.clone(),
+        };
+        let mut workspace = match workspace_input {
+            Some(workspace) => workspace,
+            None if project != board.project_id => None,
+            None => board.workspace_id.clone(),
+        };
+        if let Some(ws) = &workspace {
+            let owner: Option<String> = tx
+                .query_row(
+                    "SELECT project_id FROM workspaces WHERE id = ?1 AND is_archived = 0",
+                    params![ws],
+                    |r| r.get(0),
+                )
+                .optional()
+                .map_err(error::from_sqlite)?
+                .flatten();
+            let owner = owner.ok_or_else(|| {
+                error::invalid_argument(
+                    "Workspace is unavailable. Choose an active Orca workspace.",
+                )
+            })?;
+            if project_input.is_some() && project.as_deref() != Some(&owner) {
+                return Err(error::invalid_argument(
+                    "The workspace does not belong to the selected project.",
+                ));
+            }
+            project = Some(owner);
+        }
+        if project.is_none() {
+            workspace = None;
+        }
+        let now = crate::now_unix_ms() as i64;
+        if project != board.project_id {
+            tx.execute(
                 "UPDATE work_tickets SET project_id = ?2, updated_at = ?4
                  WHERE board_id = ?1 AND (project_id IS NULL OR project_id IS ?3)",
                 params![board.id, project, board.project_id, now],
             )
             .map_err(error::from_sqlite)?;
-            conn.execute(
-                "UPDATE work_boards SET project_id = ?2, updated_at = ?3 WHERE id = ?1",
-                params![board.id, project, now],
-            )
-            .map_err(error::from_sqlite)?;
         }
-        if let Some(on) = bool_field(params, "autoImportMine")? {
-            conn.execute(
-                "UPDATE work_boards SET auto_import_mine = ?2, updated_at = ?3 WHERE id = ?1",
-                params![board.id, on as i64, crate::now_unix_ms() as i64],
-            )
-            .map_err(error::from_sqlite)?;
-        }
-        board_json(&conn, &get_board(&conn, &board.id)?)
+        tx.execute(
+            "UPDATE work_boards SET project_id = ?2, workspace_id = ?3, auto_import_mine = ?4, updated_at = ?5 WHERE id = ?1",
+            params![board.id, project, workspace, auto_import.unwrap_or(board.auto_import_mine), now],
+        ).map_err(error::from_sqlite)?;
+        let result = board_json(&tx, &get_board(&tx, &board.id)?)?;
+        tx.commit().map_err(error::from_sqlite)?;
+        Ok(result)
     }
 
     /// `work.board_delete`: removes an imported board and its tickets from
@@ -2384,14 +2418,17 @@ impl Engine {
             let conn = self.db.lock().unwrap();
             get_ticket(&conn, &required(params, "ticketId")?)?
         };
-        let workspace = match self.ticket_own_workspace(&ticket)? {
-            Some(workspace) => workspace,
-            None => self.ticket_workspace(&ticket)?.ok_or_else(|| {
+        let workspace = if let Some(workspace) = self.configured_ticket_workspace(&ticket)? {
+            workspace
+        } else if let Some(workspace) = self.ticket_own_workspace(&ticket)? {
+            workspace
+        } else {
+            self.ticket_workspace(&ticket)?.ok_or_else(|| {
                 error::invalid_argument(format!(
-                    "{} has no workspace or project to start a session in: choose where the board's agents work (Sync menu → Agents work in), or set the ticket's project",
+                    "{} has no workspace or project to start a session in: choose where the board's agents work (Agents work in), or set the ticket's project",
                     ticket.key
                 ))
-            })?,
+            })?
         };
         let harness = match str_field(params, "harnessId")? {
             Some(h) => validate_harness(h)?,

@@ -53,6 +53,28 @@ impl Engine {
             .map_err(|e| e.to_string())?;
         conn.pragma_update(None, "journal_mode", "WAL")
             .map_err(|e| e.to_string())?;
+        let previous = conn
+            .query_row(
+                "SELECT version FROM schema_versions WHERE component = 'work'",
+                [],
+                |r| r.get::<_, i64>(0),
+            )
+            .ok();
+        if previous.is_some_and(|version| version < crate::work::SCHEMA_VERSION) {
+            let backup = data_dir.join(format!(
+                "work-board-before-v{}-{}.db",
+                crate::work::SCHEMA_VERSION,
+                uuid::Uuid::new_v4()
+            ));
+            conn.execute("VACUUM INTO ?1", params![backup.to_string_lossy().as_ref()])
+                .map_err(|e| format!("cannot back up board before schema upgrade: {e}"))?;
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::PermissionsExt;
+                std::fs::set_permissions(&backup, std::fs::Permissions::from_mode(0o600))
+                    .map_err(|e| e.to_string())?;
+            }
+        }
         let tx = conn.transaction().map_err(|e| e.to_string())?;
         apply_mirror_schema(&tx).map_err(|e| e.to_string())?;
         crate::work::apply_pending_steps_in_tx(&tx).map_err(|e| e.to_string())?;

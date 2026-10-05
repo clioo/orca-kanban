@@ -334,9 +334,24 @@ export function WorkPage({
     if (source && summary) setImporting({ source, board: { externalId: summary.externalId ?? "", projectId: summary.projectId } });
     else if (summary?.provider) notice(`${providerLabel(summary.provider)} is turned off; turn it on in Sources`, "error");
   };
+  const [savingLocation, setSavingLocation] = useState(false);
+  const boardWorkspaces = workspaces.filter((w) => !summary?.projectId || w.projectId === summary.projectId);
+  const setBoardWorkspace = async (workspaceId: string | null) => {
+    if (!bridge || !summary?.provider || savingLocation) return;
+    setSavingLocation(true);
+    try {
+      const result = await state.run(() => bridge.boardUpdate({ boardId: summary.id, workspaceId }));
+      if (!result.ok) notice(result.error, "error");
+      else notice(workspaceId ? `New sessions use ${workspaces.find((w) => w.id === workspaceId)?.name ?? "the selected workspace"}` : "New sessions use the repository default");
+    } finally {
+      setSavingLocation(false);
+    }
+  };
   const setBoardProject = async (projectId: string | null) => {
-    if (!bridge || !summary?.provider) return;
+    if (!bridge || !summary?.provider || savingLocation) return;
+    setSavingLocation(true);
     const result = await state.run(() => bridge.boardUpdate({ boardId: summary.id, projectId }));
+    setSavingLocation(false);
     if (!result.ok) notice(result.error, "error");
     else {
       const name = board?.projects.find((p) => p.id === projectId)?.name;
@@ -513,6 +528,17 @@ export function WorkPage({
                           </DropdownMenuRadioGroup>
                         </DropdownMenuSubContent>
                       </DropdownMenuSub>
+                      <DropdownMenuSub>
+                        <DropdownMenuSubTrigger disabled={savingLocation}>Agent workspace</DropdownMenuSubTrigger>
+                        <DropdownMenuSubContent>
+                          <DropdownMenuRadioGroup value={summary.workspaceId ?? ""} onValueChange={(value) => void setBoardWorkspace(value || null)}>
+                            <DropdownMenuRadioItem value="">Repository default</DropdownMenuRadioItem>
+                            {boardWorkspaces.map((w) => (
+                              <DropdownMenuRadioItem key={w.id} value={w.id}>{w.name}</DropdownMenuRadioItem>
+                            ))}
+                          </DropdownMenuRadioGroup>
+                        </DropdownMenuSubContent>
+                      </DropdownMenuSub>
                       <DropdownMenuItem
                         onSelect={importMore}
                       >
@@ -675,27 +701,43 @@ export function WorkPage({
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
-            {imported && summary && !summary.projectId ? (
-              <div
-                className="mb-2 flex flex-wrap items-center gap-2 rounded-md border border-amber-500/40 bg-amber-500/8 px-3 py-1.5 text-xs text-amber-700 dark:text-amber-300"
-                role="status"
-                data-testid="work-board-no-project"
+            {imported && summary ? (
+              <section
+                className={`mb-2 flex flex-wrap items-center gap-2 rounded-md border px-3 py-2 text-xs ${!summary.projectId ? "border-amber-500/40 bg-amber-500/8 text-amber-700 dark:text-amber-300" : "border-border text-muted-foreground"}`}
+                aria-label="Agent location"
+                data-testid={!summary.projectId ? "work-board-no-project" : "work-board-location"}
               >
-                Agents on this board need an Orca project to work in.
-                <select
-                  aria-label="Agents work in"
-                  className="h-7 rounded-md border border-input bg-background px-2 text-xs text-foreground"
-                  value=""
-                  onChange={(event) => event.target.value && void setBoardProject(event.target.value)}
-                >
-                  <option value="">Choose a project…</option>
-                  {(board?.projects ?? []).map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+                {!summary.projectId ? <span>Agents on this board need an Orca project to work in.</span> : null}
+                <label className="flex min-w-0 items-center gap-2">
+                  Repository
+                  <select
+                    aria-label="Agents work in"
+                    className="h-8 min-w-0 max-w-64 rounded-md border border-input bg-background px-2 text-xs text-foreground"
+                    value={summary.projectId ?? ""}
+                    disabled={savingLocation}
+                    onChange={(event) => void setBoardProject(event.target.value || null)}
+                  >
+                    <option value="">Choose a project…</option>
+                    {(board?.projects ?? []).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  </select>
+                </label>
+                <label className="flex min-w-0 items-center gap-2">
+                  Workspace
+                  <select
+                    aria-label="Board workspace"
+                    className="h-8 min-w-0 max-w-80 rounded-md border border-input bg-background px-2 text-xs text-foreground"
+                    value={summary.workspaceId ?? ""}
+                    disabled={savingLocation}
+                    onChange={(event) => void setBoardWorkspace(event.target.value || null)}
+                  >
+                    <option value="">Repository default</option>
+                    {summary.workspaceId && !boardWorkspaces.some((w) => w.id === summary.workspaceId) ? <option value={summary.workspaceId} disabled>Selected workspace unavailable</option> : null}
+                    {boardWorkspaces.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
+                  </select>
+                </label>
+                <span className="basis-full">Used for new sessions. Ticket-specific workspaces and existing sessions stay where they are.</span>
+                {boardWorkspaces.length === 0 ? <span>No active workspaces found. Open a worktree in Orca to use it here.</span> : null}
+              </section>
             ) : null}
             {summary?.lastSyncError ? (
               <p className="mb-2 text-xs text-destructive" role="alert">

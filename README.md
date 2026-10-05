@@ -33,13 +33,13 @@ No Node.js, Rust, or local compilation is required for this distribution.
 In **Orca → Settings → Plugins → Install plugin → Git URL**, paste:
 
 ```text
-https://github.com/clioo/orca-kanban.git#macos-arm64-v0.2.0
+https://github.com/clioo/orca-kanban.git#macos-arm64-v0.2.1
 ```
 
 Click **Install**, review the permissions, then enable the plugin. Press
 **Command + J** and run **Open Work board**.
 
-The `#macos-arm64-v0.2.0` tag contains the compiled plugin at the repository
+The `#macos-arm64-v0.2.1` tag contains the compiled plugin at the repository
 root. The default `main` branch contains source code and is **not** directly
 installable. Keep the `#tag` suffix: Orca requires a pinned tag or commit.
 This package is for M-series Macs only, not Intel Macs, Windows, or Linux.
@@ -137,6 +137,22 @@ is not automatically added to your shell's `PATH`.
 
 ### Agent sessions
 
+On an imported board, use the **Repository** and **Workspace** selectors below
+the toolbar to choose an existing Orca worktree. Picking a workspace can infer
+its repository; the workspace list is scoped to the selected repository.
+**Repository default** keeps the existing per-ticket checkout behavior for
+manual new sessions.
+
+The board default applies to new sessions on tickets without their own
+workspace. Ticket-specific locations take precedence, and existing sessions
+are not moved. An archived or removed selected workspace produces an error
+rather than silently launching in another checkout.
+
+Version 0.2.1 adds a nullable workspace field to the local database. Before
+upgrading an older schema, the service makes an owner-readable backup named
+`work-board-before-v7-<id>.db` in its data directory. Older plugin versions
+cannot open the upgraded database; do not downgrade without restoring a backup.
+
 Launches use Orca's agent settings. Claude sessions started by the board retain
 an explicit conversation ID for exact resume. Other supported agents, and
 Claude sessions created outside the board, continue the folder's latest
@@ -190,7 +206,7 @@ pnpm --dir web exec playwright-core install chromium
 ./scripts/test-all.sh
 
 # Verify the public Git distribution through Orca's real installer.
-WORK_BOARD_INSTALL_GIT=https://github.com/clioo/orca-kanban.git#macos-arm64-v0.2.0 \
+WORK_BOARD_INSTALL_GIT=https://github.com/clioo/orca-kanban.git#macos-arm64-v0.2.1 \
   node tests/e2e/accept-orca.mjs
 
 # Regenerate screenshots from synthetic data; build the plugin first.

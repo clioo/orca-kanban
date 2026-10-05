@@ -57,7 +57,7 @@ import {
 import { WorkSyncActions, type WorkSyncHandlers } from "./WorkSyncActions";
 import { type LinkCandidates, unreadableNotice } from "./work-session-candidates";
 
-export type WorkWorkspace = { id: string; name: string };
+export type WorkWorkspace = { id: string; name: string; projectId?: string | null; path?: string };
 
 type PanelTab = "details" | "sessions" | "links" | "activity";
 

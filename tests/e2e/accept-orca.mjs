@@ -265,7 +265,7 @@ try {
   const again = await openBoard();
   assert.equal(again.reused, true);
   assert.equal((await orca(["tab", "list"])).tabs.filter((t) => t.url === base).length, 1);
-  assert.equal((await rpc("board.status")).version, "0.2.0");
+  assert.equal((await rpc("board.status")).version, JSON.parse(readFileSync(path.join(PLUGIN, "orca-plugin.json"), "utf8")).version);
   check("the-plugin-installs-through-orca-and-open-work-board-opens-its-tab");
   if (gitInstall) {
     report.installSource = installSource;
@@ -494,6 +494,24 @@ try {
   const newTab = (await terminalOf(newSession.id)).tabId;
   await waitFor("the new session in front", async () => (await activeTabId()) === newTab);
   check("new-session-on-a-ticket-makes-its-worktree-in-orca-and-opens-there");
+
+  // The board may instead route new sessions to a specific existing worktree.
+  const workspacePicker = page.getByRole("combobox", { name: "Board workspace" });
+  await workspacePicker.selectOption(ownWorktree.id, { timeout: 20000 });
+  await waitFor("board workspace saved", async () => (await rpc("work.board", { boardId: jiraBoardId })).board.workspaceId === ownWorktree.id);
+  await page.reload();
+  await waitFor("board workspace survives reload", async () => (await page.getByRole("combobox", { name: "Board workspace" }).inputValue()) === ownWorktree.id);
+  const countBefore = (await orca(["worktree", "list"])).worktrees.length;
+  await page.getByRole("button", { name: /Open APP-142:/ }).click();
+  await page.getByRole("complementary", { name: "Ticket APP-142" }).getByRole("button", { name: "New session" }).click();
+  await page.getByRole("menuitem", { name: "Claude Code" }).click();
+  const routed = await waitFor("session in selected board workspace", async () => (await ticket("APP-142")).sessions[0] ?? false);
+  assert.equal(routed.workspaceId, ownWorktree.id);
+  await waitFor("fixture launched in selected checkout", async () => launches().some((l) => l.cwd === ownWorktree.path && l.session === routed.agentSessionId));
+  assert.equal((await orca(["worktree", "list"])).worktrees.length, countBefore);
+  await shot("board-workspace-selection");
+  check("a-board-selects-a-specific-orca-workspace-and-new-sessions-use-it");
+
 
   if (await page.getByRole("button", { name: "Close ticket panel" }).count()) await page.getByRole("button", { name: "Close ticket panel" }).click();
   await page.getByRole("button", { name: "Sprint", exact: true }).click();
