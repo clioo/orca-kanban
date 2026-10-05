@@ -152,7 +152,14 @@ fn main() {
         eprintln!("work-board-svc: not starting ({reason})");
         return;
     }
-    let orca = orca::Orca::new(args.orca_cli.clone(), args.user_data.clone());
+    let mut orca = orca::Orca::new(args.orca_cli.clone(), args.user_data.clone());
+    let helper = args.plugin_root.join("bin").join("orca-rpc.cjs");
+    match orca::Orca::app_rpc_runner(&args.orca_cli, &helper) {
+        Some(runner) => orca = orca.with_rpc(runner),
+        None => eprintln!(
+            "work-board-svc: folder projects limited to those with a folder workspace (no Orca runtime helper)"
+        ),
+    }
     let engine = match Engine::open(&args.data, orca) {
         Ok(engine) => Arc::new(engine),
         Err(e) => {

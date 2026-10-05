@@ -183,6 +183,16 @@ impl Engine {
                 return;
             }
         };
+        // Folder projects (`pre-sales`) and their folder workspaces sit beside
+        // repos in Orca; an Orca that cannot list them keeps the rest working.
+        let folder_workspaces = self.orca.folder_workspaces().unwrap_or_else(|e| {
+            eprintln!(
+                "[work-board] cannot read Orca folder workspaces: {}",
+                e.message
+            );
+            Vec::new()
+        });
+        let folder_projects = self.orca.folder_projects(&folder_workspaces);
         let conn = self.db.lock().unwrap();
         let result = (|| -> rusqlite::Result<()> {
             let tx = conn.unchecked_transaction()?;
@@ -222,6 +232,22 @@ impl Engine {
                 tx.execute(
                     "INSERT OR REPLACE INTO worktrees (workspace_id, project_id, path, is_archived, created_at) VALUES (?1, ?2, ?3, ?4, ?5)",
                     params![id, repo, path, archived as i64, created],
+                )?;
+            }
+            for project in &folder_projects {
+                tx.execute(
+                    "INSERT OR REPLACE INTO projects (id, name, path, kind) VALUES (?1, ?2, ?3, 'folder-group')",
+                    params![project.id, project.name, project.path],
+                )?;
+            }
+            for ws in &folder_workspaces {
+                tx.execute(
+                    "INSERT OR REPLACE INTO workspaces (id, name, path, project_id, is_archived) VALUES (?1, ?2, ?3, ?4, ?5)",
+                    params![ws.id, ws.name, ws.path, ws.project_id, ws.archived as i64],
+                )?;
+                tx.execute(
+                    "INSERT OR REPLACE INTO worktrees (workspace_id, project_id, path, is_archived, created_at) VALUES (?1, ?2, ?3, ?4, ?5)",
+                    params![ws.id, ws.project_id, ws.path, ws.archived as i64, ws.created_at],
                 )?;
             }
             tx.commit()

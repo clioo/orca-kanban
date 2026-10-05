@@ -17,7 +17,42 @@ const CALL_TIMEOUT: Duration = Duration::from_secs(30);
 pub struct Orca {
     cli: PathBuf,
     user_data: PathBuf,
+    rpc: Option<RpcRunner>,
 }
+
+/// How runtime methods the CLI has no command for (folder projects and
+/// their folder workspaces) are reached: Orca's own runtime client, run by
+/// Orca's own Node (see `plugin/orca-rpc.cjs`). Tests point it at the fake.
+#[derive(Clone, Debug)]
+pub struct RpcRunner {
+    pub program: PathBuf,
+    pub prefix: Vec<String>,
+    pub env: Vec<(String, String)>,
+}
+
+/// A folder project (Orca "project group" backed by a folder), such as
+/// `pre-sales`: its folder workspaces are separate named contexts on it.
+#[derive(Debug, Clone)]
+pub struct FolderProject {
+    /// `folder-workspace:<groupId>`, the repo id Orca reports for its workspaces.
+    pub id: String,
+    pub group_id: String,
+    pub name: String,
+    pub path: String,
+}
+
+/// One folder workspace (`folder:<id>`) of a folder project.
+#[derive(Debug, Clone)]
+pub struct FolderWorkspace {
+    pub id: String,
+    pub project_id: String,
+    pub name: String,
+    pub path: String,
+    pub archived: bool,
+    pub created_at: i64,
+}
+
+const FOLDER_PROJECT_PREFIX: &str = "folder-workspace:";
 
 /// A live Orca terminal as `orca terminal list` reports it.
 #[derive(Debug, Clone)]
@@ -41,7 +76,35 @@ pub struct Agent {
 
 impl Orca {
     pub fn new(cli: PathBuf, user_data: PathBuf) -> Self {
-        Self { cli, user_data }
+        Self {
+            cli,
+            user_data,
+            rpc: None,
+        }
+    }
+
+    pub fn with_rpc(mut self, rpc: RpcRunner) -> Self {
+        self.rpc = Some(rpc);
+        self
+    }
+
+    /// The runner for an installed Orca: `<App>/Contents/MacOS/Orca` as
+    /// Node, with the plugin's helper. `None` when `cli` is not inside an
+    /// Orca.app (then folder projects are read from `worktree ps` only).
+    pub fn app_rpc_runner(cli: &Path, helper: &Path) -> Option<RpcRunner> {
+        let contents = cli.parent()?.parent()?.parent()?;
+        let app = contents.parent()?;
+        let electron = contents.join("MacOS").join("Orca");
+        (contents.file_name()? == "Contents" && electron.is_file() && helper.is_file()).then(|| {
+            RpcRunner {
+                program: electron,
+                prefix: vec![
+                    helper.to_string_lossy().to_string(),
+                    app.to_string_lossy().to_string(),
+                ],
+                env: vec![("ELECTRON_RUN_AS_NODE".to_string(), "1".to_string())],
+            }
+        })
     }
 
     pub fn user_data(&self) -> &Path {
@@ -50,9 +113,35 @@ impl Orca {
 
     /// Runs `orca <args> --json` and returns its `result`, or its error.
     pub fn call(&self, args: &[&str]) -> Result<Value, RpcError> {
-        let mut child = Command::new(&self.cli)
+        let mut full: Vec<String> = args.iter().map(|a| a.to_string()).collect();
+        full.push("--json".to_string());
+        self.run(&self.cli, &full, &[], args.first().unwrap_or(&""))
+    }
+
+    /// A runtime method by name (`folderWorkspace.create`, …).
+    pub fn rpc(&self, method: &str, params: &Value) -> Result<Value, RpcError> {
+        let Some(runner) = &self.rpc else {
+            return Err(RpcError::new(
+                "orca_unsupported",
+                "this Orca cannot be asked for folder projects here",
+            ));
+        };
+        let mut args = runner.prefix.clone();
+        args.push(method.to_string());
+        args.push(params.to_string());
+        self.run(&runner.program, &args, &runner.env, method)
+    }
+
+    fn run(
+        &self,
+        program: &Path,
+        args: &[String],
+        env: &[(String, String)],
+        what: &str,
+    ) -> Result<Value, RpcError> {
+        let mut child = Command::new(program)
             .args(args)
-            .arg("--json")
+            .envs(env.iter().map(|(k, v)| (k, v)))
             .env("ORCA_USER_DATA_PATH", &self.user_data)
             // A terminal's identity must never leak into a board call.
             .env_remove("ORCA_TERMINAL_HANDLE")
@@ -64,7 +153,7 @@ impl Orca {
             .map_err(|e| {
                 RpcError::new(
                     "orca_unavailable",
-                    format!("cannot run the orca CLI ({}): {e}", self.cli.display()),
+                    format!("cannot run the orca CLI ({}): {e}", program.display()),
                 )
             })?;
         let mut stdout = child.stdout.take().expect("piped");
@@ -83,8 +172,7 @@ impl Orca {
                     return Err(RpcError::new(
                         "orca_timeout",
                         format!(
-                            "orca {} did not answer within {}s",
-                            args.first().unwrap_or(&""),
+                            "orca {what} did not answer within {}s",
                             CALL_TIMEOUT.as_secs()
                         ),
                     ));
@@ -97,7 +185,7 @@ impl Orca {
         let reply: Value = serde_json::from_str(out.trim()).map_err(|_| {
             RpcError::new(
                 "orca_unavailable",
-                format!("orca {} gave no JSON reply", args.first().unwrap_or(&"")),
+                format!("orca {what} gave no JSON reply"),
             )
         })?;
         if reply["ok"] == true {
@@ -174,6 +262,99 @@ impl Orca {
             }
         }
         Ok(out)
+    }
+
+    /// Folder workspaces, as `orca worktree ps` lists them.
+    pub fn folder_workspaces(&self) -> Result<Vec<FolderWorkspace>, RpcError> {
+        let result = self.call(&["worktree", "ps", "--limit", "10000"])?;
+        Ok(result["worktrees"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter(|w| w["workspaceKind"] == "folder-workspace")
+            .filter_map(|w| {
+                Some(FolderWorkspace {
+                    id: w["worktreeId"].as_str()?.to_string(),
+                    project_id: w["repoId"].as_str()?.to_string(),
+                    name: w["displayName"].as_str().unwrap_or_default().to_string(),
+                    path: w["path"].as_str().unwrap_or_default().to_string(),
+                    archived: w["isArchived"] == true,
+                    created_at: w["createdAt"].as_i64().unwrap_or(0),
+                })
+            })
+            .collect())
+    }
+
+    /// Folder projects: Orca's folder-backed project groups. Without the
+    /// runtime helper, the ones that already have a folder workspace.
+    pub fn folder_projects(&self, workspaces: &[FolderWorkspace]) -> Vec<FolderProject> {
+        if let Ok(result) = self.rpc("projectGroup.list", &json!({})) {
+            return result["groups"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter_map(|g| {
+                    let group_id = g["id"].as_str()?.to_string();
+                    let path = g["parentPath"].as_str().filter(|p| !p.trim().is_empty())?;
+                    Some(FolderProject {
+                        id: format!("{FOLDER_PROJECT_PREFIX}{group_id}"),
+                        group_id,
+                        name: g["name"].as_str().unwrap_or("Folder project").to_string(),
+                        path: path.to_string(),
+                    })
+                })
+                .collect();
+        }
+        let ps = self.call(&["worktree", "ps", "--limit", "10000"]).ok();
+        let mut seen = std::collections::HashSet::new();
+        let names: std::collections::HashMap<String, String> = ps
+            .iter()
+            .flat_map(|r| r["worktrees"].as_array().cloned().unwrap_or_default())
+            .filter_map(|w| {
+                Some((
+                    w["repoId"].as_str()?.to_string(),
+                    w["repo"].as_str()?.to_string(),
+                ))
+            })
+            .collect();
+        workspaces
+            .iter()
+            .filter(|w| seen.insert(w.project_id.clone()))
+            .filter_map(|w| {
+                let group_id = w
+                    .project_id
+                    .strip_prefix(FOLDER_PROJECT_PREFIX)?
+                    .to_string();
+                Some(FolderProject {
+                    id: w.project_id.clone(),
+                    group_id,
+                    name: names
+                        .get(&w.project_id)
+                        .cloned()
+                        .unwrap_or_else(|| w.path.clone()),
+                    path: w.path.clone(),
+                })
+            })
+            .collect()
+    }
+
+    /// A new folder workspace in a folder project; returns its `folder:<id>`.
+    pub fn folder_workspace_create(
+        &self,
+        project_id: &str,
+        name: &str,
+    ) -> Result<String, RpcError> {
+        let group = project_id
+            .strip_prefix(FOLDER_PROJECT_PREFIX)
+            .ok_or_else(|| RpcError::new("invalid_argument", "not a folder project"))?;
+        let created = self.rpc(
+            "folderWorkspace.create",
+            &json!({ "projectGroupId": group, "name": name }),
+        )?;
+        created["folderWorkspace"]["id"]
+            .as_str()
+            .map(|id| format!("folder:{id}"))
+            .ok_or_else(|| RpcError::new("orca_error", "Orca made no folder workspace"))
     }
 
     /// A visible terminal in a worktree running `command` in its login

@@ -374,7 +374,7 @@ async function mount(bridge = fakeBridge(), onOpenSession = vi.fn()) {
     <TooltipProvider>
       <WorkPage
         bridge={bridge as unknown as WorkBridge}
-        workspaces={[{ id: "ws-1", name: "issue-621", projectId: "p1" }, { id: "ws-other", name: "Other repo · main", projectId: "p2" }]}
+        workspaces={[{ id: "ws-1", name: "issue-621" }]}
         onOpenSession={onOpenSession}
         onOpenExternal={vi.fn()}
         listSessions={vi.fn(async () => []) as never}
@@ -471,7 +471,7 @@ describe("Jira boards on the Work page", () => {
     const agentsWorkIn = within(dialog).getByRole("combobox", { name: "Agents work in" });
     const hint = document.getElementById(agentsWorkIn.getAttribute("aria-describedby") ?? "");
     expect(hint?.textContent).toBe(
-      "When a ticket starts a session (a column's prompt or New session), it opens in this project's folder.",
+      "When a ticket starts a session (a column's prompt or New session), it opens in this project; in a folder project, in the ticket's own folder workspace.",
     );
     fireEvent.change(agentsWorkIn, { target: { value: "p1" } });
     await act(async () => {
@@ -857,35 +857,26 @@ describe("working on an imported board", () => {
     await waitFor(() => expect(bridge.boardUpdate).toHaveBeenLastCalledWith({ boardId: "b7", projectId: null }));
   });
 
-  test("board workspace choices are scoped to the repository and remain editable after selection", async () => {
-    let workspaceId: string | null = null;
-    const bridge = withBoard((b) => ({ ...b, board: { ...b.board!, workspaceId } }));
-    bridge.boardUpdate = vi.fn(async (input: { boardId: string; workspaceId?: string | null }) => {
-      workspaceId = input.workspaceId ?? null;
-      return ok({ ...PLATFORM, workspaceId });
-    });
+  test("folder projects such as pre-sales are in the one picker, grouped apart from repos", async () => {
+    const bridge = withBoard((b) => ({
+      ...b,
+      board: { ...b.board!, projectId: null },
+      projects: [...b.projects, { id: "folder-workspace:g1", name: "pre-sales", kind: "folder-group" }],
+    }));
     await openPlatform(bridge as never);
-    let picker = screen.getByRole("combobox", { name: "Board workspace" }) as HTMLSelectElement;
-    expect(within(picker).getByRole("option", { name: "issue-621" })).toBeTruthy();
-    expect(within(picker).queryByRole("option", { name: "Other repo · main" })).toBeNull();
-    fireEvent.change(picker, { target: { value: "ws-1" } });
-    await waitFor(() => expect(bridge.boardUpdate).toHaveBeenCalledWith({ boardId: "b7", workspaceId: "ws-1" }));
-    await waitFor(() => expect((screen.getByRole("combobox", { name: "Board workspace" }) as HTMLSelectElement).value).toBe("ws-1"));
-    picker = screen.getByRole("combobox", { name: "Board workspace" }) as HTMLSelectElement;
-    fireEvent.change(picker, { target: { value: "" } });
-    await waitFor(() => expect(bridge.boardUpdate).toHaveBeenLastCalledWith({ boardId: "b7", workspaceId: null }));
-  });
-
-  test("a workspace can be selected before its repository and a refused save keeps the previous choice", async () => {
-    const bridge = withBoard((b) => ({ ...b, board: { ...b.board!, projectId: null, workspaceId: null } }));
-    bridge.boardUpdate = vi.fn(() => fail("Workspace is unavailable")) as never;
-    await openPlatform(bridge as never);
-    const picker = screen.getByRole("combobox", { name: "Board workspace" }) as HTMLSelectElement;
-    expect(within(picker).getByRole("option", { name: "Other repo · main" })).toBeTruthy();
-    fireEvent.change(picker, { target: { value: "ws-1" } });
-    await waitFor(() => expect(bridge.boardUpdate).toHaveBeenCalledWith({ boardId: "b7", workspaceId: "ws-1" }));
-    await waitFor(() => expect(picker.disabled).toBe(false));
-    expect(picker.value).toBe("");
+    const notice = screen.getByTestId("work-board-no-project");
+    expect(within(notice).getAllByRole("combobox")).toHaveLength(1);
+    const picker = within(notice).getByRole("combobox", { name: "Agents work in" });
+    const folders = picker.querySelector('optgroup[label="Folder projects"]')!;
+    expect(within(folders as HTMLElement).getByRole("option", { name: "pre-sales" })).toBeTruthy();
+    expect(picker.querySelector('optgroup[label="Repositories"]')).toBeTruthy();
+    expect(screen.queryByRole("combobox", { name: "Board workspace" })).toBeNull();
+    fireEvent.change(picker, { target: { value: "folder-workspace:g1" } });
+    await waitFor(() => expect(bridge.boardUpdate).toHaveBeenCalledWith({ boardId: "b7", projectId: "folder-workspace:g1" }));
+    openMenu(screen.getByRole("button", { name: "Sync options" }));
+    expect(screen.queryByRole("menuitem", { name: "Agent workspace" })).toBeNull();
+    fireEvent.keyDown(await screen.findByRole("menuitem", { name: "Agents work in" }), { key: "ArrowRight" });
+    expect(await screen.findByRole("menuitemradio", { name: "pre-sales" })).toBeTruthy();
   });
 
   test("the column panel offers prompt templates, suggested for the column first", async () => {

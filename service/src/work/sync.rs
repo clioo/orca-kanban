@@ -50,7 +50,6 @@ pub(super) struct Board {
     pub project_key: Option<String>,
     pub project_name: Option<String>,
     pub project_id: Option<String>,
-    pub workspace_id: Option<String>,
     pub statuses: Vec<BoardStatus>,
     pub last_synced_at: Option<i64>,
     pub last_sync_error: Option<String>,
@@ -67,7 +66,7 @@ pub(super) struct Sprint {
     pub end: Option<String>,
 }
 
-const BOARD_SELECT: &str = "SELECT id, provider, site_id, site_url, external_id, name, kind, project_key, project_name, project_id, statuses, last_synced_at, last_sync_error, auto_import_mine, workspace_id FROM work_boards";
+const BOARD_SELECT: &str = "SELECT id, provider, site_id, site_url, external_id, name, kind, project_key, project_name, project_id, statuses, last_synced_at, last_sync_error, auto_import_mine FROM work_boards";
 
 fn board_from_row(r: &rusqlite::Row) -> rusqlite::Result<Board> {
     Ok(Board {
@@ -85,7 +84,6 @@ fn board_from_row(r: &rusqlite::Row) -> rusqlite::Result<Board> {
         last_synced_at: r.get(11)?,
         last_sync_error: r.get(12)?,
         auto_import_mine: r.get::<_, i64>(13)? != 0,
-        workspace_id: r.get(14)?,
     })
 }
 
@@ -501,7 +499,6 @@ pub(super) fn board_json(conn: &Connection, board: &Board) -> Result<Value, RpcE
         "projectKey": board.project_key,
         "projectName": board.project_name,
         "projectId": board.project_id,
-        "workspaceId": board.workspace_id,
         "statuses": board.statuses,
         "lastSyncedAt": board.last_synced_at,
         "lastSyncError": board.last_sync_error,
@@ -1975,66 +1972,37 @@ impl Engine {
         Ok(value)
     }
 
-    /// Set the board's repository and optional existing Orca workspace.
-    /// Ticket overrides and running sessions are never relocated by this call.
+    /// `work.board_update`: an imported board's own settings. `projectId`
+    /// is where the board's agents work: an Orca repo or folder project. It
+    /// becomes the project of every ticket that had none (or had the board's
+    /// previous one), and of every ticket imported later. `null` clears it.
     pub(crate) fn do_work_board_update(&self, params: &Value) -> Result<Value, RpcError> {
-        reject_unknown(
-            params,
-            &["boardId", "autoImportMine", "projectId", "workspaceId"],
-        )?;
+        reject_unknown(params, &["boardId", "autoImportMine", "projectId"])?;
         let mut conn = self.db.lock().unwrap();
         let tx = conn.transaction().map_err(error::from_sqlite)?;
         let board = get_board(&tx, &required(params, "boardId")?)?;
-        let project_input = super::clearable(params, "projectId")?;
-        let workspace_input = super::clearable(params, "workspaceId")?;
-        let auto_import = bool_field(params, "autoImportMine")?;
-        let mut project = match project_input.clone() {
-            Some(project) => project.map(|p| resolve_project(&tx, &p)).transpose()?,
-            None => board.project_id.clone(),
-        };
-        let mut workspace = match workspace_input {
-            Some(workspace) => workspace,
-            None if project != board.project_id => None,
-            None => board.workspace_id.clone(),
-        };
-        if let Some(ws) = &workspace {
-            let owner: Option<String> = tx
-                .query_row(
-                    "SELECT project_id FROM workspaces WHERE id = ?1 AND is_archived = 0",
-                    params![ws],
-                    |r| r.get(0),
-                )
-                .optional()
-                .map_err(error::from_sqlite)?
-                .flatten();
-            let owner = owner.ok_or_else(|| {
-                error::invalid_argument(
-                    "Workspace is unavailable. Choose an active Orca workspace.",
-                )
-            })?;
-            if project_input.is_some() && project.as_deref() != Some(&owner) {
-                return Err(error::invalid_argument(
-                    "The workspace does not belong to the selected project.",
-                ));
-            }
-            project = Some(owner);
-        }
-        if project.is_none() {
-            workspace = None;
-        }
         let now = crate::now_unix_ms() as i64;
-        if project != board.project_id {
+        if let Some(project) = super::clearable(params, "projectId")? {
+            let project = project.map(|p| resolve_project(&tx, &p)).transpose()?;
             tx.execute(
                 "UPDATE work_tickets SET project_id = ?2, updated_at = ?4
                  WHERE board_id = ?1 AND (project_id IS NULL OR project_id IS ?3)",
                 params![board.id, project, board.project_id, now],
             )
             .map_err(error::from_sqlite)?;
+            tx.execute(
+                "UPDATE work_boards SET project_id = ?2, updated_at = ?3 WHERE id = ?1",
+                params![board.id, project, now],
+            )
+            .map_err(error::from_sqlite)?;
         }
-        tx.execute(
-            "UPDATE work_boards SET project_id = ?2, workspace_id = ?3, auto_import_mine = ?4, updated_at = ?5 WHERE id = ?1",
-            params![board.id, project, workspace, auto_import.unwrap_or(board.auto_import_mine), now],
-        ).map_err(error::from_sqlite)?;
+        if let Some(on) = bool_field(params, "autoImportMine")? {
+            tx.execute(
+                "UPDATE work_boards SET auto_import_mine = ?2, updated_at = ?3 WHERE id = ?1",
+                params![board.id, on as i64, now],
+            )
+            .map_err(error::from_sqlite)?;
+        }
         let result = board_json(&tx, &get_board(&tx, &board.id)?)?;
         tx.commit().map_err(error::from_sqlite)?;
         Ok(result)
@@ -2484,14 +2452,15 @@ impl Engine {
     /// project, a named workspace over a folder project's folder — shown in
     /// the sidebar under the project. `None` without a project (the caller
     /// then uses the ticket's workspace, if any).
-    fn ticket_own_workspace(&self, ticket: &Ticket) -> Result<Option<String>, RpcError> {
-        // Still there and not archived; a removed one is made again.
+    pub(super) fn ticket_own_workspace(&self, ticket: &Ticket) -> Result<Option<String>, RpcError> {
+        // Still there, not archived, and in the ticket's current project (a
+        // board moved to another project starts fresh there).
         let existing = {
             let conn = self.db.lock().unwrap();
             conn.query_row(
                 "SELECT t.workspace_id FROM work_ticket_workspaces t JOIN worktrees w ON w.workspace_id = t.workspace_id
-                 WHERE t.ticket_id = ?1 AND w.is_archived = 0",
-                params![ticket.id],
+                 WHERE t.ticket_id = ?1 AND w.is_archived = 0 AND w.project_id IS ?2",
+                params![ticket.id, ticket.project_id],
                 |r| r.get::<_, String>(0),
             )
             .optional()
@@ -2522,6 +2491,9 @@ impl Engine {
         } else {
             ticket_workspace_title(key, &ticket.title)
         };
+        if kind == "folder-group" {
+            return self.ticket_folder_workspace(ticket, project_id).map(Some);
+        }
         if kind != "git" {
             // An Orca folder repo has one checkout: the ticket works there.
             return Ok(None);
@@ -2563,6 +2535,70 @@ impl Engine {
             &format!("Made a workspace for this ticket: {name}"),
         );
         Ok(Some(workspace))
+    }
+
+    /// A folder project's ticket works in its own folder workspace, the way
+    /// Orca users keep one per ticket: one already named for the ticket's
+    /// key (`MODPRESALE-1149`, `MODPRESALE-1149-…`, `MODPRESALE-1149 …`), else
+    /// a new one named `<key> <title>`.
+    fn ticket_folder_workspace(
+        &self,
+        ticket: &Ticket,
+        project_id: &str,
+    ) -> Result<String, RpcError> {
+        let key = ticket.ext.key.as_deref().unwrap_or(&ticket.key).to_string();
+        let named = {
+            let conn = self.db.lock().unwrap();
+            let mut stmt = conn
+                .prepare(
+                    "SELECT id, name FROM workspaces WHERE project_id = ?1 AND is_archived = 0
+                     ORDER BY id",
+                )
+                .map_err(error::from_sqlite)?;
+            let rows = stmt
+                .query_map(params![project_id], |r| {
+                    Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?))
+                })
+                .map_err(error::from_sqlite)?
+                .collect::<Result<Vec<_>, _>>()
+                .map_err(error::from_sqlite)?;
+            rows.into_iter()
+                .find(|(_, name)| names_ticket(name, &key))
+                .map(|(id, _)| id)
+        };
+        let workspace = match named {
+            Some(id) => id,
+            None => {
+                let title: String = ticket.title.chars().take(80).collect();
+                let name = format!("{key} {}", title.trim()).trim().to_string();
+                let id = self.orca.folder_workspace_create(project_id, &name).map_err(|e| {
+                    if e.code == "orca_unsupported" {
+                        error::invalid_argument(format!(
+                            "{key} has no folder workspace in this folder project, and this Orca cannot make one for the board: create one named {key} in Orca, or link a session"
+                        ))
+                    } else {
+                        e
+                    }
+                })?;
+                self.refresh_mirror(true);
+                let conn = self.db.lock().unwrap();
+                log_activity(
+                    &conn,
+                    &ticket.id,
+                    "session",
+                    &format!("Made a folder workspace for this ticket: {name}"),
+                );
+                id
+            }
+        };
+        let conn = self.db.lock().unwrap();
+        conn.execute(
+            "INSERT INTO work_ticket_workspaces (ticket_id, workspace_id) VALUES (?1, ?2)
+             ON CONFLICT(ticket_id) DO UPDATE SET workspace_id = excluded.workspace_id",
+            params![ticket.id, workspace],
+        )
+        .map_err(error::from_sqlite)?;
+        Ok(workspace)
     }
 
     /// `work.ticket_session_rename`: the name a linked session goes by on
@@ -2694,5 +2730,39 @@ mod tests {
     fn clip_bounds_by_characters() {
         assert_eq!(clip("  héllo  ", 3), "hél");
         assert_eq!(clip("ok", 10), "ok");
+    }
+}
+
+/// Whether a folder workspace's name is for the ticket `key`: the key alone
+/// or followed by a separator (`MODPRESALE-1149-fix`, `MODPRESALE-1149 Fix`),
+/// never a longer key (`MODPRESALE-11490`).
+pub(super) fn names_ticket(name: &str, key: &str) -> bool {
+    let name = name.trim();
+    if name.len() < key.len() || !name.is_char_boundary(key.len()) {
+        return false;
+    }
+    let (head, rest) = name.split_at(key.len());
+    head.eq_ignore_ascii_case(key)
+        && rest
+            .chars()
+            .next()
+            .is_none_or(|c| !c.is_ascii_alphanumeric())
+}
+
+#[cfg(test)]
+mod folder_workspace_name_tests {
+    use super::names_ticket;
+
+    #[test]
+    fn a_folder_workspace_is_the_tickets_by_its_key() {
+        assert!(names_ticket("MODPRESALE-1149", "MODPRESALE-1149"));
+        assert!(names_ticket(
+            "MODPRESALE-1047-mixed-schedules",
+            "MODPRESALE-1047"
+        ));
+        assert!(names_ticket("modpresale-796 Fix totals", "MODPRESALE-796"));
+        assert!(!names_ticket("MODPRESALE-11490", "MODPRESALE-1149"));
+        assert!(!names_ticket("Landing page", "MODPRESALE-1149"));
+        assert!(!names_ticket("MOD", "MODPRESALE-1149"));
     }
 }

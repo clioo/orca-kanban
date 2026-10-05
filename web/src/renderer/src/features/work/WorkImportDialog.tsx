@@ -21,6 +21,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "../../components/ui/dialog";
+import { ProjectOptions } from "./work-projects";
 import type {
   WorkBoardSummary,
   WorkBridge,
@@ -97,7 +98,7 @@ export function WorkImportDialog({
   bridge: WorkBridge;
   /** The source to import from. */
   source: WorkSource;
-  projects: { id: string; name: string }[];
+  projects: { id: string; name: string; kind?: string }[];
   /** Skip straight to the issue picker of this provider board. */
   initialBoard?: { externalId: string; projectId?: string | null } | null;
   onClose: () => void;
@@ -421,15 +422,11 @@ export function WorkImportDialog({
                   onChange={(event) => setProjectId(event.target.value)}
                 >
                   <option value="">Choose per ticket later</option>
-                  {projects.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
+                  <ProjectOptions projects={projects} />
                 </select>
               </label>
               <p id="work-import-agents-work-in-hint" className="text-xs text-muted-foreground">
-                When a ticket starts a session (a column&apos;s prompt or New session), it opens in this project&apos;s folder.
+                When a ticket starts a session (a column&apos;s prompt or New session), it opens in this project; in a folder project, in the ticket&apos;s own folder workspace.
               </p>
             </div>
           </div>

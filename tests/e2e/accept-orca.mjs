@@ -201,6 +201,16 @@ async function activeTabId() {
   );
 }
 
+/** A runtime method of the isolated Orca, through the plugin's own helper. */
+function orcaRpc(method, params) {
+  const out = run("/Applications/Orca.app/Contents/MacOS/Orca", [path.join(PLUGIN, "bin", "orca-rpc.cjs"), "/Applications/Orca.app", method, JSON.stringify(params ?? {})], {
+    env: { ...process.env, HOME, ORCA_USER_DATA_PATH: USER_DATA, ELECTRON_RUN_AS_NODE: "1" },
+  });
+  const reply = JSON.parse(out);
+  assert.equal(reply.ok, true, `${method}: ${out}`);
+  return reply.result;
+}
+
 async function terminalOf(handle) {
   return (await orca(["terminal", "show", "--terminal", handle])).terminal;
 }
@@ -495,22 +505,43 @@ try {
   await waitFor("the new session in front", async () => (await activeTabId()) === newTab);
   check("new-session-on-a-ticket-makes-its-worktree-in-orca-and-opens-there");
 
-  // The board may instead route new sessions to a specific existing worktree.
-  const workspacePicker = page.getByRole("combobox", { name: "Board workspace" });
-  await workspacePicker.selectOption(ownWorktree.id, { timeout: 20000 });
-  await waitFor("board workspace saved", async () => (await rpc("work.board", { boardId: jiraBoardId })).board.workspaceId === ownWorktree.id);
+  // A folder project, like a user's `pre-sales`: an Orca project group on a
+  // folder, with one folder workspace already named for APP-128. It is in the
+  // board's one "Agents work in" picker, and each ticket works in its own
+  // folder workspace there.
+  const presalesDir = path.join(D, "projects", "pre-sales");
+  mkdirSync(presalesDir, { recursive: true });
+  const group = orcaRpc("projectGroup.create", { name: "pre-sales", parentPath: presalesDir, createdFrom: "manual" }).group;
+  const existingFolder = orcaRpc("folderWorkspace.create", { projectGroupId: group.id, name: "APP-128-existing" }).folderWorkspace;
+  if (await page.getByRole("button", { name: "Close ticket panel" }).count()) await page.getByRole("button", { name: "Close ticket panel" }).click();
   await page.reload();
-  await waitFor("board workspace survives reload", async () => (await page.getByRole("combobox", { name: "Board workspace" }).inputValue()) === ownWorktree.id);
-  const countBefore = (await orca(["worktree", "list"])).worktrees.length;
-  await page.getByRole("button", { name: /Open APP-142:/ }).click();
-  await page.getByRole("complementary", { name: "Ticket APP-142" }).getByRole("button", { name: "New session" }).click();
-  await page.getByRole("menuitem", { name: "Claude Code" }).click();
-  const routed = await waitFor("session in selected board workspace", async () => (await ticket("APP-142")).sessions[0] ?? false);
-  assert.equal(routed.workspaceId, ownWorktree.id);
-  await waitFor("fixture launched in selected checkout", async () => launches().some((l) => l.cwd === ownWorktree.path && l.session === routed.agentSessionId));
-  assert.equal((await orca(["worktree", "list"])).worktrees.length, countBefore);
-  await shot("board-workspace-selection");
-  check("a-board-selects-a-specific-orca-workspace-and-new-sessions-use-it");
+  await page.getByRole("button", { name: "Sync options" }).click();
+  await page.getByRole("menuitem", { name: "Agents work in" }).click();
+  await page.getByRole("menuitemradio", { name: "pre-sales" }).click({ timeout: 20000 });
+  const presales = `folder-workspace:${group.id}`;
+  await waitFor("the board works in pre-sales", async () => (await rpc("work.board", { boardId: jiraBoardId })).board.projectId === presales);
+  assert.equal(await page.getByRole("combobox", { name: "Board workspace" }).count(), 0, "one picker, no per-worktree list");
+  const openSessionFor = async (key) => {
+    const panelFor = page.getByRole("complementary", { name: `Ticket ${key}` });
+    if (await page.getByRole("button", { name: "Close ticket panel" }).count()) await page.getByRole("button", { name: "Close ticket panel" }).click();
+    await page.getByRole("button", { name: new RegExp(`Open ${key}:`) }).click();
+    const before = (await ticket(key)).sessions.map((s) => s.id);
+    await panelFor.getByRole("button", { name: "New session" }).click();
+    await page.getByRole("menuitem", { name: "Claude Code" }).click();
+    return waitFor(`${key}'s new session`, async () => (await ticket(key)).sessions.find((s) => !before.includes(s.id)) ?? false);
+  };
+  const reused = await openSessionFor("APP-128");
+  assert.equal(reused.workspaceId, `folder:${existingFolder.id}`, "the folder workspace already named for the ticket");
+  const made = await openSessionFor("APP-142");
+  const folders = orcaRpc("folderWorkspace.list").folderWorkspaces;
+  const madeFolder = folders.find((f) => `folder:${f.id}` === made.workspaceId);
+  assert.ok(madeFolder && madeFolder.projectGroupId === group.id, JSON.stringify(folders));
+  assert.match(madeFolder.name, /^APP-142 Improve error messages/);
+  await waitFor("the agent runs in pre-sales", async () => launches().some((l) => l.session === made.agentSessionId && l.cwd === presalesDir));
+  const madeTab = (await terminalOf(made.id)).tabId;
+  await waitFor("the folder workspace's session in front", async () => (await activeTabId()) === madeTab);
+  await shot("folder-project-session");
+  check("a-folder-project-like-pre-sales-is-where-agents-work-each-ticket-in-its-folder-workspace");
 
 
   if (await page.getByRole("button", { name: "Close ticket panel" }).count()) await page.getByRole("button", { name: "Close ticket panel" }).click();
