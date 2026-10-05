@@ -41,8 +41,8 @@ pub(crate) const SCHEMA_COMPONENT: &str = "work";
 /// sources the owner allows and their connections (Linear, GitHub). v4: a
 /// board can keep importing new issues assigned to the owner. v5: columns
 /// can be collapsed. v6: the workspace made for a ticket, where its New
-/// session starts.
-pub(crate) const SCHEMA_VERSION: i64 = 6;
+/// session starts. v7: an imported board can target an existing workspace.
+pub(crate) const SCHEMA_VERSION: i64 = 7;
 
 /// How often a watched pull request is re-read (`gh pr view`).
 pub(crate) const PR_POLL_MS: i64 = 5 * 60_000;
@@ -148,6 +148,9 @@ pub(crate) fn apply_pending_steps_in_tx(tx: &Transaction) -> rusqlite::Result<()
                 workspace_id TEXT NOT NULL
             );",
         )?;
+    }
+    if existing.unwrap_or(0) < 7 {
+        add_column(tx, "work_boards", "workspace_id", "TEXT")?;
     }
     tx.execute(
         "INSERT INTO schema_versions (component, version) VALUES (?1, ?2)
@@ -2001,11 +2004,64 @@ impl Engine {
             .unwrap_or_else(|| "claude".to_string())
     }
 
+    /// Explicit ticket locations win over the board default. A stale board
+    /// choice fails closed rather than launching in a different checkout.
+    fn configured_ticket_workspace(&self, ticket: &Ticket) -> Result<Option<String>, RpcError> {
+        let conn = self.db.lock().unwrap();
+        if let Some(ws) = &ticket.workspace_id {
+            let active = conn
+                .query_row(
+                    "SELECT 1 FROM workspaces WHERE id = ?1 AND is_archived = 0",
+                    params![ws],
+                    |_| Ok(()),
+                )
+                .optional()
+                .map_err(error::from_sqlite)?
+                .is_some();
+            if active {
+                return Ok(Some(ws.clone()));
+            }
+            // Automatically created ticket worktrees may be recreated after archive.
+            let own = conn.query_row(
+                "SELECT 1 FROM work_ticket_workspaces WHERE ticket_id = ?1 AND workspace_id = ?2",
+                params![ticket.id, ws], |_| Ok(()),
+            ).optional().map_err(error::from_sqlite)?.is_some();
+            if !own {
+                return Err(error::invalid_argument(
+                    "The ticket's workspace is unavailable. Choose another workspace in Links.",
+                ));
+            }
+        }
+        if let Some(id) = &ticket.ext.board_id {
+            let board = sync::get_board(&conn, id)?;
+            if (ticket.project_id.is_none() || ticket.project_id == board.project_id)
+                && let Some(ws) = board.workspace_id
+            {
+                let active = conn
+                    .query_row(
+                        "SELECT 1 FROM workspaces WHERE id = ?1 AND is_archived = 0",
+                        params![ws],
+                        |_| Ok(()),
+                    )
+                    .optional()
+                    .map_err(error::from_sqlite)?
+                    .is_some();
+                if !active {
+                    return Err(error::invalid_argument(
+                        "The board's workspace is unavailable. Choose another workspace in Agents work in.",
+                    ));
+                }
+                return Ok(Some(ws));
+            }
+        }
+        Ok(None)
+    }
+
     /// The workspace a new session for this ticket starts in: the ticket's
     /// own, else its project's main checkout, else any of its worktrees.
     fn ticket_workspace(&self, ticket: &Ticket) -> Result<Option<String>, RpcError> {
-        if let Some(ws) = &ticket.workspace_id {
-            return Ok(Some(ws.clone()));
+        if let Some(ws) = self.configured_ticket_workspace(ticket)? {
+            return Ok(Some(ws));
         }
         let Some(project) = &ticket.project_id else {
             return Ok(None);
@@ -2420,7 +2476,7 @@ mod tests {
                 |r| r.get(0),
             )
             .unwrap();
-        assert_eq!(version, 6);
+        assert_eq!(version, SCHEMA_VERSION);
         conn.execute(
             "INSERT INTO work_ticket_workspaces (ticket_id, workspace_id) VALUES ('t', 'w')",
             [],

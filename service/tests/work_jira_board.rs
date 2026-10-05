@@ -1513,3 +1513,141 @@ fn jira_connects_in_sources_with_a_sealed_token_and_disconnects() {
         "jira_not_connected"
     );
 }
+
+#[test]
+fn a_board_workspace_routes_manual_and_prompt_sessions_without_making_a_worktree() {
+    let b = Board::imported();
+    let ws = b.ctx.ok("orca.workspaces", json!({}))["workspaces"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|w| w["projectId"] == b.project_id)
+        .unwrap()["id"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    let chosen = format!("{}::/fixture/review", b.project_id);
+    b.ctx.board.edit(|state| {
+        state["worktrees"].as_array_mut().unwrap().push(json!({
+            "id": chosen, "repoId": b.project_id, "path": "/fixture/review",
+            "displayName": "review", "isMainWorktree": false, "isArchived": false, "createdAt": 2
+        }));
+    });
+    b.ctx.board.engine.refresh_mirror(true);
+    let updated = b.ctx.ok(
+        "work.board_update",
+        json!({"boardId": b.board_id, "workspaceId": chosen}),
+    );
+    assert_eq!(updated["workspaceId"], chosen);
+    assert_eq!(updated["projectId"], b.project_id);
+    // Every new or imported ticket reads the default dynamically.
+    assert!(b.ticket("APP-142")["workspaceId"].is_null());
+    let before = b.ctx.board.state()["worktrees"].as_array().unwrap().len();
+    let started = b
+        .ctx
+        .ok("work.ticket_session_start", json!({"ticketId": "APP-142"}));
+    assert_eq!(started["session"]["workspaceId"], chosen);
+    let delivered = b.ctx.ok(
+        "work.column_send",
+        json!({"ticketId": "APP-128", "message": "Check the selected checkout"}),
+    );
+    let id = delivered["sends"][0]["results"][0]["newSessionId"]
+        .as_str()
+        .unwrap();
+    assert_eq!(b.ctx.board.terminal(id)["worktreeId"], chosen);
+    assert_eq!(
+        b.ctx.board.state()["worktrees"].as_array().unwrap().len(),
+        before
+    );
+    // Ticket overrides win, including the manual New session path.
+    b.ctx.ok(
+        "work.ticket_update",
+        json!({"ticketId": "APP-130", "workspaceId": ws}),
+    );
+    let explicit = b
+        .ctx
+        .ok("work.ticket_session_start", json!({"ticketId": "APP-130"}));
+    assert_eq!(explicit["session"]["workspaceId"], ws);
+    // Persisted independently of the engine, survives restart.
+    let reopened = work_board_svc::Engine::open(
+        &b.ctx.data_dir(),
+        work_board_svc::orca::Orca::new(
+            b.ctx.board.root.path().join("orca"),
+            b.ctx.board.user_data.clone(),
+        ),
+    )
+    .unwrap();
+    assert_eq!(
+        reopened
+            .dispatch("work.board", &json!({"boardId": b.board_id}))
+            .unwrap()["board"]["workspaceId"],
+        chosen
+    );
+}
+
+#[test]
+fn board_workspace_validation_is_atomic_and_clearing_project_clears_the_default() {
+    let b = Board::imported();
+    let other_ws = b.ctx.board.main_worktree();
+    let before = b.view(None)["board"].clone();
+    let error = b.ctx.err("work.board_update", json!({"boardId": b.board_id, "projectId": b.project_id, "workspaceId": other_ws, "autoImportMine": true}));
+    assert!(error.message.contains("does not belong"));
+    assert_eq!(
+        b.view(None)["board"],
+        before,
+        "no partial update on mismatch"
+    );
+    let bad = b.ctx.err(
+        "work.board_update",
+        json!({"boardId": b.board_id, "workspaceId": "unknown"}),
+    );
+    assert!(bad.message.contains("unavailable"));
+    let changed = b.ctx.ok(
+        "work.board_update",
+        json!({"boardId": b.board_id, "workspaceId": other_ws}),
+    );
+    assert_eq!(
+        changed["projectId"], "repo-drogon",
+        "choosing a workspace infers its repository"
+    );
+    assert_eq!(b.ticket("APP-142")["projectId"], "repo-drogon");
+    b.ctx.board.edit(|state| {
+        for w in state["worktrees"].as_array_mut().unwrap() {
+            if w["id"] == other_ws {
+                w["isArchived"] = json!(true);
+            }
+        }
+    });
+    b.ctx.board.engine.refresh_mirror(true);
+    assert!(
+        b.ctx
+            .err("work.ticket_session_start", json!({"ticketId": "APP-142"}))
+            .message
+            .contains("unavailable")
+    );
+    assert!(
+        b.ctx.board.terminals_created().is_empty(),
+        "never fall back silently to a different checkout"
+    );
+    assert!(
+        b.ctx
+            .err(
+                "work.board_update",
+                json!({"boardId": b.board_id, "workspaceId": other_ws})
+            )
+            .message
+            .contains("unavailable")
+    );
+    let cleared = b.ctx.ok(
+        "work.board_update",
+        json!({"boardId": b.board_id, "workspaceId": null}),
+    );
+    assert!(cleared["workspaceId"].is_null());
+    assert_eq!(cleared["projectId"], "repo-drogon");
+    let cleared = b.ctx.ok(
+        "work.board_update",
+        json!({"boardId": b.board_id, "projectId": null}),
+    );
+    assert!(cleared["projectId"].is_null());
+    assert!(cleared["workspaceId"].is_null());
+}

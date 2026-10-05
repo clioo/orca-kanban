@@ -732,3 +732,69 @@ fn a_claude_session_the_user_started_continues_its_folders_latest_conversation()
     );
     assert_eq!(b.prompt_of(&command), "carry on");
 }
+
+#[test]
+fn upgrading_v6_preserves_tickets_and_backs_up_the_previous_database() {
+    let b = Board::new();
+    let ticket = b.ticket("Keep this ticket", "To do");
+    {
+        let conn = b.engine.db.lock().unwrap();
+        conn.execute_batch("ALTER TABLE work_boards DROP COLUMN workspace_id; UPDATE schema_versions SET version = 6 WHERE component = 'work';").unwrap();
+    }
+    let data = b.root.path().join("data");
+    let reopened = work_board_svc::Engine::open(
+        &data,
+        work_board_svc::orca::Orca::new(b.root.path().join("orca"), b.user_data.clone()),
+    )
+    .unwrap();
+    assert_eq!(
+        reopened
+            .dispatch("work.ticket_show", &json!({"ticketId": ticket["id"]}))
+            .unwrap()["title"],
+        "Keep this ticket"
+    );
+    let backups: Vec<_> = std::fs::read_dir(&data)
+        .unwrap()
+        .flatten()
+        .filter(|f| {
+            f.file_name()
+                .to_string_lossy()
+                .starts_with("work-board-before-v7-")
+        })
+        .collect();
+    assert_eq!(backups.len(), 1);
+    let backup = rusqlite::Connection::open(backups[0].path()).unwrap();
+    assert_eq!(
+        backup
+            .query_row(
+                "SELECT version FROM schema_versions WHERE component = 'work'",
+                [],
+                |r| r.get::<_, i64>(0)
+            )
+            .unwrap(),
+        6
+    );
+    assert_eq!(
+        backup
+            .query_row("SELECT title FROM work_tickets", [], |r| r
+                .get::<_, String>(0))
+            .unwrap(),
+        "Keep this ticket"
+    );
+}
+
+#[test]
+fn an_explicit_ticket_workspace_is_used_instead_of_creating_a_new_checkout() {
+    let b = Board::new();
+    let ticket = b.ticket("Use the chosen checkout", "To do");
+    b.ok(
+        "work.ticket_update",
+        json!({"ticketId": ticket["id"], "workspaceId": b.main_worktree()}),
+    );
+    let started = b.ok(
+        "work.ticket_session_start",
+        json!({"ticketId": ticket["id"]}),
+    );
+    assert_eq!(started["session"]["workspaceId"], b.main_worktree());
+    assert_eq!(b.state()["worktrees"].as_array().unwrap().len(), 1);
+}

@@ -374,7 +374,7 @@ async function mount(bridge = fakeBridge(), onOpenSession = vi.fn()) {
     <TooltipProvider>
       <WorkPage
         bridge={bridge as unknown as WorkBridge}
-        workspaces={[{ id: "ws-1", name: "issue-621" }]}
+        workspaces={[{ id: "ws-1", name: "issue-621", projectId: "p1" }, { id: "ws-other", name: "Other repo · main", projectId: "p2" }]}
         onOpenSession={onOpenSession}
         onOpenExternal={vi.fn()}
         listSessions={vi.fn(async () => []) as never}
@@ -804,7 +804,7 @@ describe("Jira board helpers", () => {
 describe("working on an imported board", () => {
   /** The fake board with a change applied to every answer. */
   function withBoard(change: (board: WorkBoard) => WorkBoard) {
-    const bridge = { ...fakeBridge(), boardUpdate: vi.fn(() => ok(PLATFORM)) };
+    const bridge = { ...fakeBridge(), boardUpdate: vi.fn<WorkBridge["boardUpdate"]>(() => ok(PLATFORM)) };
     const original = bridge.board;
     bridge.board = vi.fn(async (input?: { boardId?: string; sprintId?: string }) => {
       const result = await original(input);
@@ -855,6 +855,37 @@ describe("working on an imported board", () => {
     fireEvent.keyDown(sub, { key: "ArrowRight" });
     fireEvent.click(await screen.findByRole("menuitemradio", { name: "No project" }));
     await waitFor(() => expect(bridge.boardUpdate).toHaveBeenLastCalledWith({ boardId: "b7", projectId: null }));
+  });
+
+  test("board workspace choices are scoped to the repository and remain editable after selection", async () => {
+    let workspaceId: string | null = null;
+    const bridge = withBoard((b) => ({ ...b, board: { ...b.board!, workspaceId } }));
+    bridge.boardUpdate = vi.fn(async (input: { boardId: string; workspaceId?: string | null }) => {
+      workspaceId = input.workspaceId ?? null;
+      return ok({ ...PLATFORM, workspaceId });
+    });
+    await openPlatform(bridge as never);
+    let picker = screen.getByRole("combobox", { name: "Board workspace" }) as HTMLSelectElement;
+    expect(within(picker).getByRole("option", { name: "issue-621" })).toBeTruthy();
+    expect(within(picker).queryByRole("option", { name: "Other repo · main" })).toBeNull();
+    fireEvent.change(picker, { target: { value: "ws-1" } });
+    await waitFor(() => expect(bridge.boardUpdate).toHaveBeenCalledWith({ boardId: "b7", workspaceId: "ws-1" }));
+    await waitFor(() => expect((screen.getByRole("combobox", { name: "Board workspace" }) as HTMLSelectElement).value).toBe("ws-1"));
+    picker = screen.getByRole("combobox", { name: "Board workspace" }) as HTMLSelectElement;
+    fireEvent.change(picker, { target: { value: "" } });
+    await waitFor(() => expect(bridge.boardUpdate).toHaveBeenLastCalledWith({ boardId: "b7", workspaceId: null }));
+  });
+
+  test("a workspace can be selected before its repository and a refused save keeps the previous choice", async () => {
+    const bridge = withBoard((b) => ({ ...b, board: { ...b.board!, projectId: null, workspaceId: null } }));
+    bridge.boardUpdate = vi.fn(() => fail("Workspace is unavailable")) as never;
+    await openPlatform(bridge as never);
+    const picker = screen.getByRole("combobox", { name: "Board workspace" }) as HTMLSelectElement;
+    expect(within(picker).getByRole("option", { name: "Other repo · main" })).toBeTruthy();
+    fireEvent.change(picker, { target: { value: "ws-1" } });
+    await waitFor(() => expect(bridge.boardUpdate).toHaveBeenCalledWith({ boardId: "b7", workspaceId: "ws-1" }));
+    await waitFor(() => expect(picker.disabled).toBe(false));
+    expect(picker.value).toBe("");
   });
 
   test("the column panel offers prompt templates, suggested for the column first", async () => {
