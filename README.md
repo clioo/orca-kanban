@@ -33,13 +33,13 @@ No Node.js, Rust, or local compilation is required for this distribution.
 In **Orca → Settings → Plugins → Install plugin → Git URL**, paste:
 
 ```text
-https://github.com/clioo/orca-kanban.git#macos-arm64-v0.2.2
+https://github.com/clioo/orca-kanban.git#macos-arm64-v0.2.3
 ```
 
 Click **Install**, review the permissions, then enable the plugin. Press
 **Command + J** and run **Open Work board**.
 
-The `#macos-arm64-v0.2.2` tag contains the compiled plugin at the repository
+The `#macos-arm64-v0.2.3` tag contains the compiled plugin at the repository
 root. The default `main` branch contains source code and is **not** directly
 installable. Keep the `#tag` suffix: Orca requires a pinned tag or commit.
 This package is for M-series Macs only, not Intel Macs, Windows, or Linux.
@@ -212,7 +212,7 @@ pnpm --dir web exec playwright-core install chromium
 ./scripts/test-all.sh
 
 # Verify the public Git distribution through Orca's real installer.
-WORK_BOARD_INSTALL_GIT=https://github.com/clioo/orca-kanban.git#macos-arm64-v0.2.2 \
+WORK_BOARD_INSTALL_GIT=https://github.com/clioo/orca-kanban.git#macos-arm64-v0.2.3 \
   node tests/e2e/accept-orca.mjs
 
 # Regenerate screenshots from synthetic data; build the plugin first.
@@ -229,6 +229,10 @@ The screenshot script uses headless Chromium, a temporary home directory, and
 the fixture CLI. It verifies process cleanup before deleting its temporary data.
 
 ## Troubleshooting
+
+**Open Work board** shows the board in the worktree or folder workspace in
+front, reusing that worktree's board tab; with nothing selected in Orca it
+reveals an existing board tab.
 
 **The tab cannot reach the server:** run **Open Work board** again. Use the
 `http://127.0.0.1:<port>` address opened by the plugin, not HTTPS or an old

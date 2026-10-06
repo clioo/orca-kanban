@@ -6,6 +6,7 @@
 // plugin is disabled or removed (and hands over to a newer version).
 import { execFile, spawn } from "node:child_process";
 import { closeSync, mkdirSync, openSync, readFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -30,19 +31,28 @@ function orcaCli() {
   return join(process.execPath.slice(0, at + 4), "Contents", "Resources", "bin", "orca");
 }
 
+function orcaEnv() {
+  const env = { ...process.env, ORCA_USER_DATA_PATH: userData };
+  for (const key of ["ORCA_WORKSPACE_ID", "ORCA_TERMINAL_HANDLE", "ORCA_PANE_KEY", "ORCA_WORKTREE_ID"]) delete env[key];
+  return env;
+}
+
 function orca(args) {
   return new Promise((resolve, reject) => {
     execFile(
       orcaCli(),
       [...args, "--json"],
-      { env: { ...process.env, ORCA_USER_DATA_PATH: userData }, timeout: 20_000 },
+      // "Current worktree" must mean the one in front in Orca, never one
+      // guessed from this process's directory or inherited terminal env.
+      { env: orcaEnv(), cwd: tmpdir(), timeout: 20_000 },
       (error, stdout) => {
         let reply = null;
         try {
           reply = JSON.parse(stdout);
         } catch {}
         if (reply?.ok) return resolve(reply.result);
-        reject(new Error(reply?.error?.message ?? error?.message ?? `orca ${args[0]} failed`));
+        const why = reply?.error?.message ?? error?.message ?? "failed";
+        reject(new Error(`orca ${args.filter((a) => !a.startsWith("http")).join(" ")}: ${why}`));
       },
     );
   });
@@ -112,29 +122,43 @@ async function ensureService() {
   throw new Error(`The Work board service did not start.${tail ? ` ${tail}` : ""}`);
 }
 
-/** Reuses the board's tab when one is open, otherwise opens it. */
+/** The worktree (or folder workspace) in front in Orca, if any. */
+async function activeWorktree() {
+  const { worktrees = [] } = await orca(["worktree", "ps", "--limit", "10000"]);
+  return worktrees.find((w) => w.isActive)?.worktreeId ?? null;
+}
+
+/** Shows the board where the user is. Browser tabs belong to a worktree,
+ *  so a board tab left in another worktree would only be "switched to"
+ *  there, out of sight: the board opens in the worktree in front (reusing
+ *  its board tab). Neither call names that worktree: Orca's tab commands
+ *  take no selector for folder workspaces, and without one they act on the
+ *  worktree in front. With nothing in front, a board tab elsewhere is
+ *  revealed, or the board opens in the first worktree. */
 async function openBoard() {
   const service = await ensureService();
   const url = `http://127.0.0.1:${service.port}/`;
-  const { tabs = [] } = await orca(["tab", "list"]);
-  const open = tabs.find((tab) => tab.url?.startsWith(url));
-  if (open) {
-    await orca(["tab", "switch", "--page", open.browserPageId]);
-    return { url, page: open.browserPageId, reused: true };
+  const [active, { tabs = [] }] = await Promise.all([activeWorktree(), orca(["tab", "list", "--worktree", "all"])]);
+  const boardTabs = tabs.filter((tab) => tab.url?.startsWith(url));
+  if (active) {
+    const here = boardTabs.find((tab) => tab.worktreeId === active);
+    if (here) {
+      await orca(["tab", "switch", "--page", here.browserPageId]);
+      return { url, page: here.browserPageId, worktreeId: active, reused: true };
+    }
+    const created = await orca(["tab", "create", "--url", url]);
+    return { url, page: created.browserPageId, worktreeId: active, reused: false };
   }
-  let created;
-  try {
-    created = await orca(["tab", "create", "--url", url]);
-  } catch (error) {
-    // Nothing is selected in Orca yet: open the board in the first
-    // worktree there is (a browser tab lives in a worktree).
-    if (!/active worktree/i.test(error.message)) throw error;
-    const { worktrees = [] } = await orca(["worktree", "list"]);
-    const first = worktrees.find((w) => !w.isArchived);
-    if (!first) throw new Error("Add a project to Orca first: the Work board opens beside your worktrees.");
-    created = await orca(["tab", "create", "--url", url, "--worktree", `id:${first.id}`]);
+  if (boardTabs[0]) {
+    const tab = boardTabs[0];
+    await orca(["tab", "switch", "--page", tab.browserPageId, "--focus"]);
+    return { url, page: tab.browserPageId, worktreeId: tab.worktreeId, reused: true };
   }
-  return { url, page: created.browserPageId, reused: false };
+  const { worktrees = [] } = await orca(["worktree", "list"]);
+  const first = worktrees.find((w) => !w.isArchived);
+  if (!first) throw new Error("Add a project to Orca first: the Work board opens beside your worktrees.");
+  const created = await orca(["tab", "create", "--url", url, "--worktree", `id:${first.id}`]);
+  return { url, page: created.browserPageId, worktreeId: first.id, reused: false };
 }
 
 async function forward(path, payload) {

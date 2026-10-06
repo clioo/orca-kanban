@@ -3,7 +3,7 @@
   "id": "work-board",
   "publisher": "clioo",
   "name": "Work board",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "A Kanban of your Jira, Linear and GitHub tickets whose columns prompt the agents working them.",
   "engines": {
     "orca": ">=1.4.0"
