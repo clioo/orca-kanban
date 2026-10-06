@@ -505,6 +505,24 @@ try {
   await waitFor("the new session in front", async () => (await activeTabId()) === newTab);
   check("new-session-on-a-ticket-makes-its-worktree-in-orca-and-opens-there");
 
+  // Open Work board from another worktree (the ticket's, now in front)
+  // shows the board there, not as a tab switched to out of sight in the
+  // worktree it first opened in; a second Open reuses that tab.
+  const frontNow = async () => (await orca(["worktree", "ps"])).worktrees.find((w) => w.isActive)?.worktreeId;
+  await waitFor("the ticket's worktree in front", async () => (await frontNow()) === ownWorktree.id);
+  const elsewhere = await openBoard();
+  assert.equal(elsewhere.worktreeId, ownWorktree.id, JSON.stringify(elsewhere));
+  assert.equal(elsewhere.reused, false);
+  const boardHere = async () => (await orca(["tab", "list", "--worktree", `id:${ownWorktree.id}`])).tabs.find((t) => t.url === base);
+  await waitFor("the board is the active tab of the worktree in front", async () => (await boardHere())?.active === true);
+  assert.equal((await orca(["tab", "list", "--worktree", "all"])).tabs.find((t) => t.browserPageId === elsewhere.page)?.worktreeId, ownWorktree.id);
+  assert.equal(await frontNow(), ownWorktree.id, "the user stays in their worktree");
+  const againHere = await openBoard();
+  assert.equal(againHere.reused, true);
+  assert.equal(againHere.page, elsewhere.page);
+  assert.equal((await orca(["tab", "list", "--worktree", `id:${ownWorktree.id}`])).tabs.filter((t) => t.url === base).length, 1);
+  check("open-work-board-shows-the-board-in-the-worktree-in-front");
+
   // A folder project, like a user's `pre-sales`: an Orca project group on a
   // folder, with one folder workspace already named for APP-128. It is in the
   // board's one "Agents work in" picker, and each ticket works in its own
@@ -542,6 +560,17 @@ try {
   await waitFor("the folder workspace's session in front", async () => (await activeTabId()) === madeTab);
   await shot("folder-project-session");
   check("a-folder-project-like-pre-sales-is-where-agents-work-each-ticket-in-its-folder-workspace");
+
+  // With a folder workspace in front (Orca's tab commands take no selector
+  // for one), Open Work board still shows the board right there.
+  await waitFor("the folder workspace in front", async () => (await frontNow()) === made.workspaceId);
+  const inFolder = await openBoard();
+  assert.equal(inFolder.worktreeId, made.workspaceId, JSON.stringify(inFolder));
+  await waitFor("the board is the active tab of the folder workspace", async () =>
+    (await orca(["tab", "list", "--worktree", "all"])).tabs.some((t) => t.url === base && t.worktreeId === made.workspaceId && t.active),
+  );
+  assert.equal((await openBoard()).page, inFolder.page, "a second Open reuses it");
+  check("open-work-board-shows-the-board-in-a-folder-workspace-in-front");
 
 
   if (await page.getByRole("button", { name: "Close ticket panel" }).count()) await page.getByRole("button", { name: "Close ticket panel" }).click();
