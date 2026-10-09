@@ -1,0 +1,20 @@
+{
+  "version": "0.2.4",
+  "platform": "darwin",
+  "arch": "arm64",
+  "sourceRepository": "https://github.com/clioo/orca-kanban",
+  "sourceCommit": "2f04e646bc824040df44a779894634e67efc1972",
+  "sha256": {
+    "LICENSE": "288856297b78b461ce8bee79466c09c9d033773cfe136b42d28bf2034b8abf49",
+    "THIRD_PARTY_NOTICES.md": "43633fb88d107ba24bacf88421e76241353f578d79b33577f44379baeba8ff96",
+    "bin/orca-rpc.cjs": "b75af6ec2727da6cb913f7c15887b73467a09ccbced9ebd994770a50df18ce09",
+    "bin/work-board-svc": "24e1cf404ebc6c95cee78ec844686d2f93dfc6276d4008a261d3a8ea8df29e62",
+    "orca-plugin.json": "9e272a925eb331aefd11ed20e4a2239db776b765c6ba4c90e03d432d5ca3a456",
+    "web/assets/Geist-Variable-CrgPqtmy.woff2": "e24cec106619c03f0b3519e31b9bc55e0d5e926b6a95b8d798cd8cef215b1505",
+    "web/assets/SymbolsNerdFontMono-Regular-CoUzE12l.woff2": "8efa6ba89f0a1f3eefde028f36aa64a13e36282e15ea0ca6929c664501037467",
+    "web/assets/index-CCAiqpPG.js": "1ac56e90cb66659f8cd072798237156f9055e98def4392bab77e676b0b760fb1",
+    "web/assets/index-kEz2uWr4.css": "d64277389731aab860b3e71ec47213fa6531f67c3278cd10472ac5272e467be1",
+    "web/index.html": "947874ec5bce5af095934dc39b06de7ca9aa1b624d0f7aedf6486608771292ed",
+    "worker.mjs": "f9c3d4cb75af14c910a216f5a83db7da08f7fa8a3b9ff4abc5cfbcd271e697ab"
+  }
+}
