@@ -105,6 +105,16 @@ impl Board {
         .unwrap();
     }
 
+    /// Orca settings as Orca 1.4.22x stores them: the `settings` document
+    /// of the profile's SQLite store (`orca-data.json` becomes a frozen
+    /// export there).
+    pub fn orca_settings_store(&self, settings: Value) {
+        write_profile_store(
+            &self.user_data.join("profiles").join("local-default"),
+            &settings,
+        );
+    }
+
     pub fn call(&self, method: &str, params: Value) -> Result<Value, String> {
         self.engine
             .dispatch(method, &params)
@@ -227,4 +237,24 @@ pub fn linked_ids(ticket: &Value) -> Vec<String> {
         .iter()
         .map(|s| s["id"].as_str().unwrap().to_string())
         .collect()
+}
+
+/// Writes a profile store shaped like Orca 1.4.22x's `profile-state.db`.
+pub fn write_profile_store(dir: &Path, settings: &Value) {
+    std::fs::create_dir_all(dir).unwrap();
+    let conn = rusqlite::Connection::open(dir.join("profile-state.db")).unwrap();
+    conn.execute_batch(
+        "PRAGMA journal_mode = WAL;
+         CREATE TABLE IF NOT EXISTS profile_state_documents (
+            domain TEXT PRIMARY KEY NOT NULL, payload TEXT NOT NULL,
+            domain_version INTEGER NOT NULL, revision INTEGER NOT NULL,
+            updated_at INTEGER NOT NULL, content_hash TEXT NOT NULL);",
+    )
+    .unwrap();
+    conn.execute(
+        "INSERT INTO profile_state_documents VALUES ('settings', ?1, 1, 1, 0, '')
+         ON CONFLICT(domain) DO UPDATE SET payload = excluded.payload, revision = revision + 1",
+        [settings.to_string()],
+    )
+    .unwrap();
 }

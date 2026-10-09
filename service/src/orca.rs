@@ -428,29 +428,73 @@ impl Orca {
     }
 
     /// Orca's own settings (the default agent, per-agent command overrides
-    /// and default args), read from its profile store. Empty when unreadable.
+    /// and default args) for the default profile, else the first readable
+    /// one. Empty when unreadable.
     pub fn settings(&self) -> Value {
-        let profiles = self.user_data.join("profiles");
-        let mut paths: Vec<PathBuf> = std::fs::read_dir(&profiles)
-            .map(|entries| {
-                entries
-                    .flatten()
-                    .map(|e| e.path().join("orca-data.json"))
-                    .collect()
-            })
-            .unwrap_or_default();
+        let mut dirs = profile_dirs(&self.user_data.join("profiles"));
         // The default profile first, the rest in name order.
-        paths.sort_by_key(|p| (!p.to_string_lossy().contains("local-default"), p.clone()));
-        for path in paths {
-            if let Ok(text) = std::fs::read_to_string(&path)
-                && let Ok(data) = serde_json::from_str::<Value>(&text)
-                && data["settings"].is_object()
-            {
-                return data["settings"].clone();
-            }
-        }
-        json!({})
+        dirs.sort_by_key(|p| (!p.to_string_lossy().contains("local-default"), p.clone()));
+        dirs.iter()
+            .find_map(|dir| profile_settings(dir))
+            .unwrap_or_else(|| json!({}))
     }
+}
+
+fn profile_dirs(profiles: &Path) -> Vec<PathBuf> {
+    std::fs::read_dir(profiles)
+        .map(|entries| {
+            entries
+                .flatten()
+                .map(|e| e.path())
+                .filter(|p| p.is_dir())
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+/// Every Orca profile's settings (for the plugin's disabled check).
+pub fn all_profile_settings(user_data: &Path) -> Vec<Value> {
+    profile_dirs(&user_data.join("profiles"))
+        .iter()
+        .filter_map(|dir| profile_settings(dir))
+        .collect()
+}
+
+/// One profile's settings. Orca 1.4.22x keeps profile state in SQLite
+/// (`profile-state.db`, document `settings`) and leaves `orca-data.json` as
+/// a frozen export; earlier Orcas keep it in `orca-data.json`. Read-only:
+/// Orca owns both.
+pub fn profile_settings(dir: &Path) -> Option<Value> {
+    let db = dir.join("profile-state.db");
+    if db.is_file() {
+        let read = || -> rusqlite::Result<String> {
+            let conn = rusqlite::Connection::open_with_flags(
+                &db,
+                rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY
+                    | rusqlite::OpenFlags::SQLITE_OPEN_NO_MUTEX,
+            )?;
+            conn.busy_timeout(Duration::from_secs(2))?;
+            conn.query_row(
+                "SELECT payload FROM profile_state_documents WHERE domain = 'settings'",
+                [],
+                |r| r.get(0),
+            )
+        };
+        match read()
+            .ok()
+            .and_then(|text| serde_json::from_str::<Value>(&text).ok())
+        {
+            Some(settings) if settings.is_object() => return Some(settings),
+            // A store being written or of another shape: the legacy file is
+            // better than nothing, never worse than the last good read.
+            _ => {}
+        }
+    }
+    let text = std::fs::read_to_string(dir.join("orca-data.json")).ok()?;
+    let data: Value = serde_json::from_str(&text).ok()?;
+    data["settings"]
+        .is_object()
+        .then(|| data["settings"].clone())
 }
 
 /// Orca's agent state words onto the board's (`working`, `idle`,
