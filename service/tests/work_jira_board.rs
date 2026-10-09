@@ -1708,3 +1708,56 @@ fn a_tickets_chosen_workspace_wins_and_a_gone_one_is_never_replaced_silently() {
     );
     assert_eq!(b.ctx.board.terminals_created().len(), before);
 }
+
+#[test]
+fn a_board_follows_its_jira_site_connected_again_with_another_email() {
+    let b = Board::imported();
+    let imported_with = b.view(None)["board"]["siteId"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    // The board's own connection is gone; the same Jira is connected again
+    // as someone else (as when a board comes over from another app).
+    b.ctx
+        .ok("work.source_disconnect", json!({"provider": "jira"}));
+    b.ctx.ok(
+        "work.source_connect",
+        json!({"provider": "jira", "siteUrl": format!("{}/", b.server.site_url()), "email": "other@example.com", "apiKey": support::FIXTURE_TOKEN}),
+    );
+    b.server
+        .control("issue/APP-142", json!({"status": "In Progress"}));
+    b.ctx.ok("work.board_sync", json!({"boardId": b.board_id}));
+    assert_eq!(
+        b.column_name_of(&b.ticket("APP-142")),
+        "In Progress",
+        "the sync ran"
+    );
+    let board = b.view(None)["board"].clone();
+    assert_ne!(
+        board["siteId"],
+        imported_with.as_str(),
+        "the board keeps the connection it now uses"
+    );
+    assert!(board["lastSyncError"].is_null(), "{board}");
+
+    // Connected only to a different Jira site: the error says which one is missing.
+    let other = FixtureServer::new();
+    b.ctx
+        .ok("work.source_disconnect", json!({"provider": "jira"}));
+    b.ctx.ok(
+        "work.source_connect",
+        json!({"provider": "jira", "siteUrl": other.site_url(), "email": "other@example.com", "apiKey": support::FIXTURE_TOKEN}),
+    );
+    let refused = b.ctx.err("work.board_sync", json!({"boardId": b.board_id}));
+    assert!(
+        refused.message.contains(&b.server.site_url()),
+        "{}",
+        refused.message
+    );
+    assert!(
+        refused.message.contains(&other.site_url()),
+        "{}",
+        refused.message
+    );
+    assert!(refused.message.contains("Connect"), "{}", refused.message);
+}

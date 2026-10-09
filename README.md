@@ -21,7 +21,7 @@ column prompts, and Jira, Linear, and GitHub integrations.
 - **Bring your issue tracker.** Import Jira boards, Linear teams, and GitHub Projects or repositories. Work with sprints, cycles, and iterations; review pending changes before pushing them upstream.
 - **Keep your board local.** A standalone Rust service stores board data in SQLite and serves the UI inside an Orca browser tab. No separate hosted board account is required.
 
-> Early release · Validated on macOS Apple Silicon with Orca 1.4.209.
+> Early release · Validated on macOS Apple Silicon with Orca 1.4.209 and 1.4.223.
 > Orca's plugin API is experimental. Other Orca versions and operating systems
 > are not yet verified. This is an independent community plugin, not an official Orca product.
 
@@ -33,13 +33,13 @@ No Node.js, Rust, or local compilation is required for this distribution.
 In **Orca → Settings → Plugins → Install plugin → Git URL**, paste:
 
 ```text
-https://github.com/clioo/orca-kanban.git#macos-arm64-v0.2.3
+https://github.com/clioo/orca-kanban.git#macos-arm64-v0.2.4
 ```
 
 Click **Install**, review the permissions, then enable the plugin. Press
 **Command + J** and run **Open Work board**.
 
-The `#macos-arm64-v0.2.3` tag contains the compiled plugin at the repository
+The `#macos-arm64-v0.2.4` tag contains the compiled plugin at the repository
 root. The default `main` branch contains source code and is **not** directly
 installable. Keep the `#tag` suffix: Orca requires a pinned tag or commit.
 This package is for M-series Macs only, not Intel Macs, Windows, or Linux.
@@ -212,7 +212,7 @@ pnpm --dir web exec playwright-core install chromium
 ./scripts/test-all.sh
 
 # Verify the public Git distribution through Orca's real installer.
-WORK_BOARD_INSTALL_GIT=https://github.com/clioo/orca-kanban.git#macos-arm64-v0.2.3 \
+WORK_BOARD_INSTALL_GIT=https://github.com/clioo/orca-kanban.git#macos-arm64-v0.2.4 \
   node tests/e2e/accept-orca.mjs
 
 # Regenerate screenshots from synthetic data; build the plugin first.

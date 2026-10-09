@@ -598,6 +598,42 @@ fn launches_follow_orcas_agent_settings() {
 }
 
 #[test]
+fn launches_follow_the_settings_orca_1_4_22x_keeps_in_its_profile_store() {
+    let b = Board::new();
+    // A frozen legacy export that contradicts the live store.
+    b.orca_settings(json!({
+        "defaultTuiAgent": "claude",
+        "agentCmdOverrides": { "claude": "/stale/claude" }
+    }));
+    b.orca_settings_store(json!({
+        "defaultTuiAgent": "codex",
+        "agentCmdOverrides": { "claude": "/opt/fixture/claude" },
+        "agentDefaultArgs": { "claude": "--verbose" }
+    }));
+    let ticket = b.ticket("Store", "To do");
+    let codex = b.ok(
+        "work.ticket_session_start",
+        json!({"ticketId": ticket["id"]}),
+    );
+    assert_eq!(
+        codex["session"]["harnessId"], "codex",
+        "the live default agent"
+    );
+    let claude = b.ok(
+        "work.ticket_session_start",
+        json!({"ticketId": ticket["id"], "harnessId": "claude"}),
+    );
+    let command = b.terminal(claude["session"]["id"].as_str().unwrap())["command"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    assert!(
+        command.starts_with("/opt/fixture/claude --verbose --session-id "),
+        "the live command override, never a bare `claude`: {command}"
+    );
+}
+
+#[test]
 fn link_candidates_are_orcas_live_terminals() {
     let b = Board::new();
     let a = b.user_terminal(Some("claude"));

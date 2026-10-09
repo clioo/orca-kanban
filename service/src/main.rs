@@ -63,7 +63,7 @@ fn lifecycle_check(args: &Args) -> Option<&'static str> {
     if !args.plugin_root.join("orca-plugin.json").exists() {
         return Some("removed");
     }
-    if disabled_in(&args.user_data.join("profiles"), &args.plugin_key) {
+    if disabled_in(&args.user_data, &args.plugin_key) {
         return Some("disabled");
     }
     // Orca keeps each installed version in its own folder and names the
@@ -89,29 +89,15 @@ fn lifecycle_check(args: &Args) -> Option<&'static str> {
 
 /// Disabled when the plugin system is off or the plugin is listed as
 /// disabled in any Orca profile's settings.
-fn disabled_in(profiles: &Path, key: &str) -> bool {
-    let Ok(entries) = std::fs::read_dir(profiles) else {
-        return false;
-    };
-    for entry in entries.flatten() {
-        let Ok(text) = std::fs::read_to_string(entry.path().join("orca-data.json")) else {
-            continue;
-        };
-        let Ok(data) = serde_json::from_str::<Value>(&text) else {
-            continue;
-        };
-        let settings = &data["settings"];
-        if settings["pluginSystemEnabled"] == false {
-            return true;
-        }
-        if settings["disabledPlugins"]
-            .as_array()
-            .is_some_and(|list| list.iter().any(|v| v == key))
-        {
-            return true;
-        }
-    }
-    false
+fn disabled_in(user_data: &Path, key: &str) -> bool {
+    orca::all_profile_settings(user_data)
+        .iter()
+        .any(|settings| {
+            settings["pluginSystemEnabled"] == false
+                || settings["disabledPlugins"]
+                    .as_array()
+                    .is_some_and(|list| list.iter().any(|v| v == key))
+        })
 }
 
 fn bind(port: Option<u16>) -> tiny_http::Server {

@@ -331,3 +331,24 @@ fn a_removed_or_disabled_plugin_stops_its_service() {
     std::fs::remove_file(s.plugin_dir.join("aaaa").join("orca-plugin.json")).unwrap();
     s.wait_for("removed: the service exits", || (!alive(pid)).then_some(()));
 }
+
+#[test]
+fn disabling_in_orca_1_4_22x_profile_store_stops_the_service() {
+    let s = Installed::new();
+    let pid = s.state().unwrap()["pid"].as_i64().unwrap();
+    let profile = s.user_data.join("profiles").join("local-default");
+    // The frozen export still says enabled; the live store says disabled.
+    std::fs::create_dir_all(&profile).unwrap();
+    std::fs::write(
+        profile.join("orca-data.json"),
+        json!({"settings": {"pluginSystemEnabled": true, "disabledPlugins": []}}).to_string(),
+    )
+    .unwrap();
+    common::write_profile_store(
+        &profile,
+        &json!({"pluginSystemEnabled": true, "disabledPlugins": ["clioo.work-board"]}),
+    );
+    s.wait_for("disabled in the store: the service exits", || {
+        (!alive(pid)).then_some(())
+    });
+}

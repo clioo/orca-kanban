@@ -154,7 +154,16 @@ impl Engine {
             "orca.workspaces" => self.orca_workspaces(),
             "orca.sessions" => self.orca_sessions(params),
             "orca.session_focus" => self.orca_session_focus(params),
-            "board.status" => Ok(json!({ "version": env!("CARGO_PKG_VERSION") })),
+            "board.status" => {
+                // What the board reads from Orca's agent settings, for
+                // troubleshooting launches.
+                let settings = self.orca.settings();
+                Ok(json!({
+                    "version": env!("CARGO_PKG_VERSION"),
+                    "defaultAgent": self.orca_default_agent(),
+                    "agentCommands": settings["agentCmdOverrides"].clone(),
+                }))
+            }
             "board.migration_status" => self.migration_status(params),
             "board.migrate_from_drogon" => self.migrate_from_drogon(params),
             _ => Err(error::method_not_found(method)),

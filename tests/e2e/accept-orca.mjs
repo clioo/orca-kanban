@@ -276,6 +276,12 @@ try {
   assert.equal(again.reused, true);
   assert.equal((await orca(["tab", "list"])).tabs.filter((t) => t.url === base).length, 1);
   assert.equal((await rpc("board.status")).version, JSON.parse(readFileSync(path.join(PLUGIN, "orca-plugin.json"), "utf8")).version);
+  // Before any agent starts: the board must read the fixture agents from
+  // Orca's settings, or a launch would run the developer's real `claude`.
+  await waitFor("the board reads the fixture agents from Orca's settings", async () => {
+    const status = await rpc("board.status");
+    return status.defaultAgent === "claude" && status.agentCommands?.claude === `${AGENTS}/claude`;
+  });
   check("the-plugin-installs-through-orca-and-open-work-board-opens-its-tab");
   if (gitInstall) {
     report.installSource = installSource;
@@ -378,9 +384,15 @@ try {
   // A Claude session the user started continues its folder's latest
   // conversation (Orca keeps the conversation id to itself).
   // Linking the new terminal precedes its shell actually launching the agent.
-  await waitFor("the replacement agent launched in continue mode", async () =>
-    launches().some((l) => l.agent === "claude" && l.mode === "continue"),
-  );
+  try {
+    await waitFor("the replacement agent launched in continue mode", async () =>
+      launches().some((l) => l.agent === "claude" && l.mode === "continue"),
+    );
+  } catch (error) {
+    const screen = await orca(["terminal", "read", "--terminal", replacement], { allowFailure: true });
+    const shown = await orca(["terminal", "show", "--terminal", replacement], { allowFailure: true });
+    throw new Error(`${error.message}\nlaunches: ${JSON.stringify(launches())}\nterminal: ${JSON.stringify(shown)?.slice(0, 800)}\nscreen: ${JSON.stringify(screen)?.slice(0, 2500)}`);
+  }
   const replacementTab = (await terminalOf(replacement)).tabId;
   await waitFor("replacement in front", async () => (await activeTabId()) === replacementTab);
   check("a-stopped-session-is-resumed-by-its-click-and-replaces-the-old-link");
@@ -748,6 +760,9 @@ try {
     if (report.processes.survivors.length > 0) {
       process.exitCode = 1;
       report.cleanupError = "processes of this run survived";
+    } else if (report.status !== "PASSED" && process.env.WORK_BOARD_KEEP_FAILED) {
+      // Kept for diagnosis: agent launches, logs and the isolated Orca's data.
+      report.kept = D;
     } else {
       rmSync(D, { recursive: true, force: true });
     }

@@ -1246,8 +1246,50 @@ fn provider_error(error: super::provider::ProviderError) -> RpcError {
 }
 
 impl Engine {
+    /// The provider for an imported board, through the connection it was
+    /// imported with. A Jira board whose connection is gone (connected again
+    /// with another email, or brought over from Drogon) follows the same Jira
+    /// site connected in Sources, and keeps it; a board from a site that is
+    /// not connected says which one.
     fn board_provider(&self, board: &Board) -> Result<Box<dyn WorkProvider + '_>, RpcError> {
-        self.work_provider(&board.provider, Some(&board.site_id))
+        let error = match self.work_provider(&board.provider, Some(&board.site_id)) {
+            Err(e) if board.provider == "jira" && e.code == "jira_not_connected" => e,
+            other => return other,
+        };
+        let file = self.jira.sites.read_site_file();
+        let connected: Vec<_> = file
+            .sites
+            .iter()
+            .filter(|s| self.jira.sites.has_stored_token(&s.id))
+            .collect();
+        let Some(site) = connected
+            .iter()
+            .find(|s| same_jira_site(&s.site_url, &board.site_url))
+        else {
+            if connected.is_empty() {
+                return Err(error);
+            }
+            let urls: Vec<&str> = connected.iter().map(|s| s.site_url.as_str()).collect();
+            return Err(RpcError::new(
+                "jira_not_connected",
+                format!(
+                    "{} is from {}, but Jira is connected to {}. Connect {} in Work → Sources.",
+                    board.name,
+                    board.site_url,
+                    urls.join(", "),
+                    board.site_url
+                ),
+            ));
+        };
+        {
+            let conn = self.db.lock().unwrap();
+            conn.execute(
+                "UPDATE work_boards SET site_id = ?2, updated_at = ?3 WHERE id = ?1",
+                params![board.id, site.id, crate::now_unix_ms() as i64],
+            )
+            .map_err(error::from_sqlite)?;
+        }
+        self.work_provider("jira", Some(&site.id))
     }
 
     fn provider_param<'a>(
@@ -2764,5 +2806,37 @@ mod folder_workspace_name_tests {
         assert!(!names_ticket("MODPRESALE-11490", "MODPRESALE-1149"));
         assert!(!names_ticket("Landing page", "MODPRESALE-1149"));
         assert!(!names_ticket("MOD", "MODPRESALE-1149"));
+    }
+}
+
+/// Two Jira site URLs name the same site (scheme, host case and trailing
+/// slashes aside).
+pub(super) fn same_jira_site(a: &str, b: &str) -> bool {
+    let norm = |u: &str| {
+        crate::jira::identity::normalize_jira_site_url(u)
+            .unwrap_or_else(|_| u.trim().trim_end_matches('/').to_string())
+            .to_ascii_lowercase()
+    };
+    norm(a) == norm(b)
+}
+
+#[cfg(test)]
+mod same_jira_site_tests {
+    use super::same_jira_site;
+
+    #[test]
+    fn a_site_is_the_same_whatever_its_spelling() {
+        assert!(same_jira_site(
+            "https://acme.atlassian.net",
+            "https://ACME.atlassian.net/"
+        ));
+        assert!(same_jira_site(
+            "acme.atlassian.net",
+            "https://acme.atlassian.net"
+        ));
+        assert!(!same_jira_site(
+            "https://acme.atlassian.net",
+            "https://other.atlassian.net"
+        ));
     }
 }
