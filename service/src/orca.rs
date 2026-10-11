@@ -88,22 +88,33 @@ impl Orca {
         self
     }
 
-    /// The runner for an installed Orca: `<App>/Contents/MacOS/Orca` as
-    /// Node, with the plugin's helper. `None` when `cli` is not inside an
-    /// Orca.app (then folder projects are read from `worktree ps` only).
+    /// The runner for an installed Orca: its own executable as Node, with
+    /// the plugin's helper and the resources folder that holds Orca's
+    /// runtime client. `cli` is `<resources>/bin/<cli>`, and the executable
+    /// is `Orca.app/Contents/MacOS/Orca` on macOS or `orca-ide` beside
+    /// `resources` on Linux. `None` for any other layout (then folder
+    /// projects are read from `worktree ps` only).
     pub fn app_rpc_runner(cli: &Path, helper: &Path) -> Option<RpcRunner> {
-        let contents = cli.parent()?.parent()?.parent()?;
-        let app = contents.parent()?;
-        let electron = contents.join("MacOS").join("Orca");
-        (contents.file_name()? == "Contents" && electron.is_file() && helper.is_file()).then(|| {
-            RpcRunner {
-                program: electron,
-                prefix: vec![
-                    helper.to_string_lossy().to_string(),
-                    app.to_string_lossy().to_string(),
-                ],
-                env: vec![("ELECTRON_RUN_AS_NODE".to_string(), "1".to_string())],
-            }
+        let resources = cli.parent()?.parent()?;
+        let install = resources.parent()?;
+        let electron = if install.file_name()? == "Contents" {
+            install.join("MacOS").join("Orca")
+        } else if resources.file_name()? == "resources" {
+            // The names Orca's own Linux CLI launcher tries, in its order.
+            ["orca-ide", "orca", "Orca"]
+                .iter()
+                .map(|name| install.join(name))
+                .find(|path| path.is_file())?
+        } else {
+            return None;
+        };
+        (electron.is_file() && helper.is_file()).then(|| RpcRunner {
+            program: electron,
+            prefix: vec![
+                helper.to_string_lossy().to_string(),
+                resources.to_string_lossy().to_string(),
+            ],
+            env: vec![("ELECTRON_RUN_AS_NODE".to_string(), "1".to_string())],
         })
     }
 
@@ -512,5 +523,77 @@ pub fn board_agent_state(orca_state: &str) -> &'static str {
             "needs_input"
         }
         _ => "unknown",
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn touch(path: &Path) {
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(path, "").unwrap();
+    }
+
+    fn runner(cli: &Path, helper: &Path) -> Option<(PathBuf, Vec<String>)> {
+        Orca::app_rpc_runner(cli, helper).map(|r| (r.program, r.prefix))
+    }
+
+    #[test]
+    fn the_rpc_runner_is_found_in_orca_app_on_macos() {
+        let dir = tempfile::tempdir().unwrap();
+        let contents = dir.path().join("Orca.app").join("Contents");
+        let cli = contents.join("Resources").join("bin").join("orca");
+        let helper = dir.path().join("plugin").join("bin").join("orca-rpc.cjs");
+        touch(&cli);
+        touch(&helper);
+        assert_eq!(runner(&cli, &helper), None, "no Orca executable yet");
+        touch(&contents.join("MacOS").join("Orca"));
+        assert_eq!(
+            runner(&cli, &helper),
+            Some((
+                contents.join("MacOS").join("Orca"),
+                vec![
+                    helper.to_string_lossy().to_string(),
+                    contents.join("Resources").to_string_lossy().to_string(),
+                ]
+            ))
+        );
+    }
+
+    #[test]
+    fn the_rpc_runner_is_found_beside_orca_ide_on_linux() {
+        let dir = tempfile::tempdir().unwrap();
+        // `/opt/Orca`, an unpacked tarball or an AppImage's mount.
+        let install = dir.path().join("Orca");
+        let cli = install.join("resources").join("bin").join("orca-ide");
+        let helper = dir.path().join("plugin").join("bin").join("orca-rpc.cjs");
+        touch(&cli);
+        assert_eq!(runner(&cli, &helper), None, "no Orca executable yet");
+        touch(&install.join("orca-ide"));
+        assert_eq!(runner(&cli, &helper), None, "no helper yet");
+        touch(&helper);
+        assert_eq!(
+            runner(&cli, &helper),
+            Some((
+                install.join("orca-ide"),
+                vec![
+                    helper.to_string_lossy().to_string(),
+                    install.join("resources").to_string_lossy().to_string(),
+                ]
+            ))
+        );
+    }
+
+    #[test]
+    fn no_rpc_runner_outside_an_orca_install() {
+        let dir = tempfile::tempdir().unwrap();
+        // A CLI that is not Orca's own (a test fake, a shim on PATH).
+        let cli = dir.path().join("tools").join("bin").join("orca");
+        let helper = dir.path().join("orca-rpc.cjs");
+        touch(&cli);
+        touch(&helper);
+        touch(&dir.path().join("orca-ide"));
+        assert_eq!(runner(&cli, &helper), None);
     }
 }

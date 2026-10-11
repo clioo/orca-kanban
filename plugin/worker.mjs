@@ -5,7 +5,7 @@
 // watches and syncs going between activations, and stops by itself when the
 // plugin is disabled or removed (and hands over to a newer version).
 import { execFile, spawn } from "node:child_process";
-import { closeSync, mkdirSync, openSync, readFileSync } from "node:fs";
+import { closeSync, existsSync, mkdirSync, openSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -24,11 +24,23 @@ const userData = userDataOf(root);
 const dataDir = join(userData, "plugins-data", PLUGIN_KEY);
 const statePath = join(dataDir, "service.json");
 
-/** The CLI of the Orca running this worker (its Helper lives inside Orca.app). */
+/** The CLI of the Orca running this worker, where Orca itself installs it:
+ *  `<resources>/bin/orca` on macOS (its Helper lives inside Orca.app) and
+ *  `<resources>/bin/orca-ide` on Linux, beside the `orca-ide` executable
+ *  (`/opt/Orca`, an unpacked tarball, or an AppImage's mount). */
 function orcaCli() {
-  const at = process.execPath.indexOf(".app/");
-  if (at < 0) throw new Error(`cannot find Orca.app from ${process.execPath}`);
-  return join(process.execPath.slice(0, at + 4), "Contents", "Resources", "bin", "orca");
+  if (process.platform === "darwin") {
+    const at = process.execPath.indexOf(".app/");
+    if (at < 0) throw new Error(`cannot find Orca.app from ${process.execPath}`);
+    return join(process.execPath.slice(0, at + 4), "Contents", "Resources", "bin", "orca");
+  }
+  if (process.platform === "linux") {
+    const resources = process.resourcesPath ?? join(dirname(process.execPath), "resources");
+    const cli = join(resources, "bin", "orca-ide");
+    if (!existsSync(cli)) throw new Error(`cannot find Orca's CLI at ${cli}`);
+    return cli;
+  }
+  throw new Error(`The Work board does not support ${process.platform} yet.`);
 }
 
 function orcaEnv() {
@@ -80,13 +92,19 @@ async function sleep(ms) {
   await new Promise((r) => setTimeout(r, ms));
 }
 
-/** The running service of THIS version, starting it (and retiring one
- *  left from an older version) when needed. */
+/** The running service of THIS version for THIS Orca, starting it (and
+ *  retiring one left from an older version or another Orca) when needed. */
 async function ensureService() {
   const state = readState();
+  const cli = orcaCli();
+  // A service is bound to the CLI it was started with. An AppImage mounts
+  // Orca at a new path on every launch, so one started by an earlier launch
+  // would keep calling a CLI that may be gone.
+  const ours = (s) => s.root === root && s.orcaCli === cli;
   if (state && alive(state.pid)) {
-    if (state.root === root) return state;
-    // Another version's service (e.g. 0.1, which predates handover).
+    if (ours(state)) return state;
+    // Another version's service (e.g. 0.1, which predates handover), or one
+    // started by another Orca.
     process.kill(state.pid, "SIGTERM");
     for (let i = 0; i < 50 && alive(state.pid); i++) await sleep(100);
   }
@@ -96,7 +114,7 @@ async function ensureService() {
     "--plugin-root", root,
     "--plugin-key", PLUGIN_KEY,
     "--user-data", userData,
-    "--orca-cli", orcaCli(),
+    "--orca-cli", cli,
     "--data", dataDir,
   ];
   if (state?.port) args.push("--port", String(state.port));
@@ -112,7 +130,7 @@ async function ensureService() {
   for (let i = 0; i < 100; i++) {
     if (failed) throw new Error(`The Work board service could not start: ${failed.message}`);
     const started = readState();
-    if (started && started.root === root && alive(started.pid)) return started;
+    if (started && ours(started) && alive(started.pid)) return started;
     await sleep(100);
   }
   let tail = "";

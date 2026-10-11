@@ -381,7 +381,7 @@ pub fn set_gh_bin_override(path: Option<PathBuf>) {
     *GH_OVERRIDE.lock().unwrap_or_else(|p| p.into_inner()) = path;
 }
 
-/// The `gh` CLI: on PATH, else Homebrew's or /usr/local's.
+/// The `gh` CLI: on PATH, else Homebrew's (macOS or Linux) or /usr/local's.
 pub(crate) fn gh_bin() -> PathBuf {
     if let Some(path) = GH_OVERRIDE
         .lock()
@@ -392,10 +392,14 @@ pub(crate) fn gh_bin() -> PathBuf {
     }
     find_on_path("gh")
         .or_else(|| {
-            ["/opt/homebrew/bin/gh", "/usr/local/bin/gh"]
-                .iter()
-                .map(PathBuf::from)
-                .find(|p| p.is_file())
+            [
+                "/opt/homebrew/bin/gh",
+                "/usr/local/bin/gh",
+                "/home/linuxbrew/.linuxbrew/bin/gh",
+            ]
+            .iter()
+            .map(PathBuf::from)
+            .find(|p| p.is_file())
         })
         .unwrap_or_else(|| PathBuf::from("gh"))
 }

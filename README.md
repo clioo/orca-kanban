@@ -21,9 +21,10 @@ column prompts, and Jira, Linear, and GitHub integrations.
 - **Bring your issue tracker.** Import Jira boards, Linear teams, and GitHub Projects or repositories. Work with sprints, cycles, and iterations; review pending changes before pushing them upstream.
 - **Keep your board local.** A standalone Rust service stores board data in SQLite and serves the UI inside an Orca browser tab. No separate hosted board account is required.
 
-> Early release · Validated on macOS Apple Silicon with Orca 1.4.209 and 1.4.223.
-> Orca's plugin API is experimental. Other Orca versions and operating systems
-> are not yet verified. This is an independent community plugin, not an official Orca product.
+> Early release · Validated on macOS Apple Silicon with Orca 1.4.209 and 1.4.223,
+> and on Ubuntu 26.04 x64 with the Orca 1.4.224 AppImage. Orca's plugin API is
+> experimental. Other Orca versions and operating systems are not yet verified.
+> This is an independent community plugin, not an official Orca product.
 
 ## Get started
 
@@ -46,12 +47,21 @@ This package is for M-series Macs only, not Intel Macs, Windows, or Linux.
 Each laptop keeps its own local board; installing does not transfer another
 machine's tickets, credentials, or agent sessions.
 
+### Linux
+
+There is no prebuilt Linux distribution yet: build the plugin from source as
+below, then install the generated folder. It works with Orca's AppImage, its
+`.deb` package, or an unpacked tarball. Jira requests go through `curl`;
+install it if your distribution does not ship it.
+
 ### Build from source — requirements
 
-- Orca installed at `/Applications/Orca.app`, with plugins enabled.
+- Orca with plugins enabled: `/Applications/Orca.app` on macOS, or any Orca
+  install on Linux.
 - Node.js 24 and pnpm 11.19.0 on your `PATH`.
 - A current stable Rust toolchain, including Cargo, rustfmt, and Clippy.
-- Xcode Command Line Tools for native compilation and `codesign`.
+- A C compiler for the bundled SQLite: Xcode Command Line Tools on macOS
+  (which also provide `codesign`), `build-essential` or equivalent on Linux.
 - An installed, configured agent CLI if you want to launch agent sessions.
 
 ### Build and install
@@ -66,7 +76,8 @@ pnpm --dir web install --frozen-lockfile
 1. Open **Orca → Settings → Plugins → Install plugin**.
 2. Select the generated **`dist/clioo.work-board`** folder.
 3. Review the requested permissions and enable the plugin.
-4. Press **Command + J**, search for **Open Work board**, and run it.
+4. Press **Command + J** (**Ctrl + Shift + J** on Linux), search for
+   **Open Work board**, and run it.
 
 The board opens in an Orca browser tab. To update, build again and install the
 same folder. The plugin ID remains `clioo.work-board` so existing installations
@@ -211,6 +222,11 @@ pnpm --dir web exec playwright-core install chromium
 # Also run acceptance against the installed Orca, in an isolated profile.
 ./scripts/test-all.sh
 
+# On Linux the acceptance runs /opt/Orca; point ORCA_APP at another
+# unpacked Orca, such as an extracted AppImage.
+./Orca.AppImage --appimage-extract
+ORCA_APP="$PWD/squashfs-root" ./scripts/test-all.sh
+
 # Verify the public Git distribution through Orca's real installer.
 WORK_BOARD_INSTALL_GIT=https://github.com/clioo/orca-kanban.git#macos-arm64-v0.2.4 \
   node tests/e2e/accept-orca.mjs
@@ -223,7 +239,9 @@ The automated suites cover the engine, HTTP service and CLI, persistence,
 provider workflows, UI interactions, migration, and plugin lifecycle. Real-Orca
 acceptance uses fixture agents and local provider servers: it does **not** run
 paid model inference or establish compatibility with every live provider account.
-The full macOS acceptance also requires Swift to monitor OS focus.
+The full macOS acceptance also requires Swift to monitor OS focus; Linux
+desktops have no common way to report the focused app, so the acceptance
+skips that check there.
 
 The screenshot script uses headless Chromium, a temporary home directory, and
 the fixture CLI. It verifies process cleanup before deleting its temporary data.
@@ -240,6 +258,10 @@ bookmark. Service state and logs are in the plugin data directory.
 
 **Agents cannot start:** make sure the board has an Orca project selected and
 the configured agent command works in that project's terminal.
+
+**Linux AppImage:** Orca mounts at a new path on every launch. A service
+started by an earlier launch is replaced, on the same port, the next time the
+plugin runs, for example when you run **Open Work board**.
 
 **A provider rejects a request:** check its connection in **Sources** and the
 permissions on the account or token. Do not include tokens, private tickets, or
