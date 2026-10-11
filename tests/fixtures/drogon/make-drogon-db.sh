@@ -31,6 +31,6 @@ INSERT INTO work_tickets (id, key, project_id, workspace_id, column_id, position
 INSERT INTO work_key_counters VALUES ('DRG', 44);
 INSERT INTO work_ticket_sessions (ticket_id, session_id, linked_at, label) VALUES ('dt-1', 'ds-1', 1, 'Main agent');
 SQL
-} | sqlite3 "$db"
+} | /usr/bin/python3 -c 'import sqlite3,sys; c=sqlite3.connect(sys.argv[1]); c.executescript(sys.stdin.read()); c.close()' "$db"
 printf 'v1.not-a-real-key' > "$dir/integrations/work/linear.token"
 head -c 32 /dev/urandom > "$dir/integrations/work/.token-key"

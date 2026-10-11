@@ -10,7 +10,10 @@ rm -rf "$out" && mkdir -p "$out/bin"
 cp "$root/plugin/orca-plugin.json" "$root/plugin/worker.mjs" "$root/LICENSE" "$root/THIRD_PARTY_NOTICES.md" "$out/"
 cp "$root/service/target/release/work-board-svc" "$root/plugin/orca-rpc.cjs" "$out/bin/"
 cp -R "$root/web/dist" "$out/web"
-codesign --verify "$out/bin/work-board-svc"
+# macOS runs only signed arm64 code: the linker's ad-hoc signature must hold.
+if [[ $(uname -s) == Darwin ]]; then
+  codesign --verify "$out/bin/work-board-svc"
+fi
 # The plugin's version, the service's and the UI's are one release.
 node -e '
 const fs = require("fs");

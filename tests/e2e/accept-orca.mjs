@@ -19,6 +19,9 @@
 //     disable and removal, and leaves nothing running.
 //
 // Usage: node tests/e2e/accept-orca.mjs   (after scripts/package-plugin.sh)
+// It runs /Applications/Orca.app on macOS and /opt/Orca on Linux; set
+// ORCA_APP to another Orca.app, or on Linux to any folder holding orca-ide
+// and resources/ (an unpacked tarball, `Orca.AppImage --appimage-extract`).
 // Set WORK_BOARD_INSTALL_GIT=https://host/repo.git#tag to exercise a
 // packaged Git distribution instead of installing the local build.
 import assert from "node:assert/strict";
@@ -33,7 +36,19 @@ import { attachToPage } from "./cdp-page.mjs";
 
 const root = fileURLToPath(new URL("../..", import.meta.url));
 const { chromium } = createRequire(path.join(root, "web", "package.json"))("playwright-core");
-const ORCA_CLI = "/Applications/Orca.app/Contents/Resources/bin/orca";
+// The installed Orca: its executable, the resources folder its CLI and
+// runtime client live in, and the CLI.
+const ORCA = (() => {
+  if (process.platform === "darwin") {
+    const app = process.env.ORCA_APP ?? "/Applications/Orca.app";
+    const resources = path.join(app, "Contents", "Resources");
+    return { app, exe: path.join(app, "Contents", "MacOS", "Orca"), resources, cli: path.join(resources, "bin", "orca") };
+  }
+  const app = process.env.ORCA_APP ?? "/opt/Orca";
+  const resources = path.join(app, "resources");
+  return { app, exe: path.join(app, "orca-ide"), resources, cli: path.join(resources, "bin", "orca-ide") };
+})();
+assert.ok(existsSync(ORCA.cli), `no Orca CLI at ${ORCA.cli}: set ORCA_APP to your Orca`);
 const PLUGIN = path.join(root, "dist", "clioo.work-board");
 const KEY = "clioo.work-board";
 const gitInstall = process.env.WORK_BOARD_INSTALL_GIT;
@@ -72,7 +87,7 @@ function run(cmd, args, opts = {}) {
 
 function orca(args, { allowFailure = false } = {}) {
   return new Promise((resolve, reject) => {
-    execFile(ORCA_CLI, [...args, "--json"], { env: { ...process.env, HOME, ORCA_USER_DATA_PATH: USER_DATA }, timeout: 60_000 }, (error, stdout) => {
+    execFile(ORCA.cli, [...args, "--json"], { env: { ...process.env, HOME, ORCA_USER_DATA_PATH: USER_DATA }, timeout: 60_000 }, (error, stdout) => {
       let reply = null;
       try {
         reply = JSON.parse(stdout);
@@ -145,12 +160,13 @@ async function control(base, pathname, body) {
   assert.ok(response.ok, `fixture control ${pathname}`);
 }
 
-/** The frontmost app's pid, sampled through the run. */
-function frontPid() {
+/** The frontmost app's pid, sampled through the run (macOS only: Linux
+ *  desktops, Wayland's above all, have no common way to ask). */
+const frontPid = process.platform !== "darwin" ? null : () => {
   const asn = run("/usr/bin/lsappinfo", ["front"], { allowFailure: true }).trim();
   const out = run("/usr/bin/lsappinfo", ["info", "-only", "pid", asn], { allowFailure: true });
   return Number(/"pid"=(\d+)/.exec(out)?.[1] ?? 0);
-}
+};
 
 // -------------------------------------------------------------- setup --
 
@@ -203,7 +219,7 @@ async function activeTabId() {
 
 /** A runtime method of the isolated Orca, through the plugin's own helper. */
 function orcaRpc(method, params) {
-  const out = run("/Applications/Orca.app/Contents/MacOS/Orca", [path.join(PLUGIN, "bin", "orca-rpc.cjs"), "/Applications/Orca.app", method, JSON.stringify(params ?? {})], {
+  const out = run(ORCA.exe, [path.join(PLUGIN, "bin", "orca-rpc.cjs"), ORCA.resources, method, JSON.stringify(params ?? {})], {
     env: { ...process.env, HOME, ORCA_USER_DATA_PATH: USER_DATA, ELECTRON_RUN_AS_NODE: "1" },
   });
   const reply = JSON.parse(out);
@@ -228,22 +244,28 @@ try {
   // finds `claude`.
   mkdirSync(AGENTS, { recursive: true });
   for (const name of ["claude", "codex", "pi", "opencode"]) cpSync(path.join(root, "tests/fixtures/fake-agent.sh"), path.join(AGENTS, name));
+  // A signed-out `gh` ahead of the real one: gh keeps its login in the OS
+  // keyring, which the isolated HOME does not hide.
+  writeFileSync(path.join(AGENTS, "gh"), "#!/bin/sh\necho 'You are not logged into any GitHub hosts.' >&2\nexit 1\n", { mode: 0o755 });
   mkdirSync(PROJECT, { recursive: true });
   for (const args of [["init", "-q", "-b", "main"], ["-c", "user.email=f@x", "-c", "user.name=f", "commit", "-q", "--allow-empty", "-m", "init"]]) {
     run("git", args, { cwd: PROJECT });
   }
   const cdp = await freePort();
-  const frontBefore = frontPid();
-  const started = run(path.join(root, "tests/e2e/isolated-orca.sh"), ["start", D], { env: { ...process.env, CDP_PORT: String(cdp) } });
+  const started = run(path.join(root, "tests/e2e/isolated-orca.sh"), ["start", D], { env: { ...process.env, ORCA_APP: ORCA.app, CDP_PORT: String(cdp) } });
   orcaPid = Number(/pid=(\d+)/.exec(started)[1]);
   report.processes.orca = orcaPid;
   // Orca must never come to the front during the run.
-  report.focus.samples = 0;
-  report.focus.orcaFront = 0;
-  focusTimer = setInterval(() => {
-    report.focus.samples += 1;
-    if (frontPid() === orcaPid) report.focus.orcaFront += 1;
-  }, 500);
+  if (frontPid) {
+    report.focus.samples = 0;
+    report.focus.orcaFront = 0;
+    focusTimer = setInterval(() => {
+      report.focus.samples += 1;
+      if (frontPid() === orcaPid) report.focus.orcaFront += 1;
+    }, 500);
+  } else {
+    report.focus.unchecked = process.platform;
+  }
   main = await attachToPage(cdp, (u) => u.startsWith("file:"));
   await main.waitFor(() => Boolean(window.api?.plugins), [], { what: "Orca's window api" });
   await api(
@@ -286,7 +308,7 @@ try {
   if (gitInstall) {
     report.installSource = installSource;
     const provenance = JSON.parse(readFileSync(path.join(service().root, "distribution.json"), "utf8"));
-    assert.equal(provenance.platform, "darwin");
+    assert.equal(provenance.platform, process.platform);
     assert.equal(provenance.arch, process.arch);
     check("the-pinned-git-distribution-installs-and-runs-without-a-build-step");
   }
@@ -744,7 +766,7 @@ try {
     main?.close();
     if (browser) await browser.close().catch(() => {});
     for (const fixture of [jira, sources]) fixture?.child.kill();
-    run(path.join(root, "tests/e2e/isolated-orca.sh"), ["stop", D], { allowFailure: true });
+    run(path.join(root, "tests/e2e/isolated-orca.sh"), ["stop", D], { env: { ...process.env, ORCA_APP: ORCA.app }, allowFailure: true });
     await delay(1000);
     const ps = run("/bin/ps", ["-axo", "pid=,command="]);
     report.processes.survivors = ps.split("\n").filter((line) => line.includes(D) || [...ownedPids].some((pid) => line.trim().startsWith(`${pid} `)));

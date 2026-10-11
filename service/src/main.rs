@@ -2,7 +2,7 @@
 //! for the board UI (`/`), its RPC (`POST /rpc`) and agent events from the
 //! plugin worker (`POST /events/agent-status`), plus the tick that sends
 //! scheduled column prompts, watches pull requests and syncs imported
-//! boards. It records `{pid, port, root, version}` in its state file and
+//! boards. It records `{pid, port, root, orcaCli, version}` in its state file and
 //! stops by itself when its plugin is disabled or removed, and hands over
 //! to a newer installed version of the plugin (same port).
 
@@ -171,6 +171,7 @@ fn main() {
         "pid": pid,
         "port": port,
         "root": args.plugin_root,
+        "orcaCli": args.orca_cli,
         "version": env!("CARGO_PKG_VERSION"),
     });
     if let Some(dir) = args.state.parent() {
