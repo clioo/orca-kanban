@@ -33,13 +33,13 @@ No Node.js, Rust, or local compilation is required for this distribution.
 In **Orca → Settings → Plugins → Install plugin → Git URL**, paste:
 
 ```text
-https://github.com/clioo/orca-kanban.git#macos-arm64-v0.2.4
+https://github.com/clioo/orca-kanban.git#macos-arm64-v0.2.5
 ```
 
 Click **Install**, review the permissions, then enable the plugin. Press
 **Command + J** and run **Open Work board**.
 
-The `#macos-arm64-v0.2.4` tag contains the compiled plugin at the repository
+The `#macos-arm64-v0.2.5` tag contains the compiled plugin at the repository
 root. The default `main` branch contains source code and is **not** directly
 installable. Keep the `#tag` suffix: Orca requires a pinned tag or commit.
 This package is for M-series Macs only, not Intel Macs, Windows, or Linux.
@@ -159,11 +159,21 @@ makes an owner-readable backup, `work-board-before-v7-<id>.db`, in its data
 directory. 0.2.0 cannot open the upgraded database: restore that backup
 before downgrading.
 
-Launches use Orca's agent settings. Claude sessions started by the board retain
-an explicit conversation ID for exact resume. Other supported agents, and
-Claude sessions created outside the board, continue the folder's latest
-conversation instead. When Orca cannot be reached, session state is reported as
+Launches use Orca's agent settings. A stopped session resumes **its own
+conversation**, never the folder's latest (folder workspaces share one folder,
+and a conversation can last days): Claude and Pi sessions the board starts
+carry a board-chosen id, and for any linked session the board records the
+conversation Orca reports for its terminal while it runs (or the one Orca kept
+when it put the workspace to sleep). Resume then uses Claude `--resume <id>`,
+Pi `--session <file>`, Codex `resume <id>` or OpenCode `--session <id>`; only
+a session with nothing recorded falls back to the folder's latest
+conversation. When Orca cannot be reached, session state is reported as
 unverifiable rather than assumed exited.
+
+Claude and Pi sessions started or resumed from a ticket are **named after it**
+(`--name "<key> <title>"`, e.g. `MODPRESALE-1149 incomeDistribution field not
+supported…`), so they are easy to find in the agent's session list. Codex and
+OpenCode have no session-name option and keep their own titles.
 
 ### Sources
 
@@ -212,7 +222,7 @@ pnpm --dir web exec playwright-core install chromium
 ./scripts/test-all.sh
 
 # Verify the public Git distribution through Orca's real installer.
-WORK_BOARD_INSTALL_GIT=https://github.com/clioo/orca-kanban.git#macos-arm64-v0.2.4 \
+WORK_BOARD_INSTALL_GIT=https://github.com/clioo/orca-kanban.git#macos-arm64-v0.2.5 \
   node tests/e2e/accept-orca.mjs
 
 # Regenerate screenshots from synthetic data; build the plugin first.

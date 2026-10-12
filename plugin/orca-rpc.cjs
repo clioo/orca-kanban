@@ -7,9 +7,10 @@
 const path = require("node:path");
 
 const [app, method, params] = process.argv.slice(2);
+// Exit only once the reply is flushed: a large reply on a pipe is written
+// asynchronously, and exiting at once would cut it off.
 const done = (reply, code = 0) => {
-  process.stdout.write(`${JSON.stringify(reply)}\n`);
-  process.exit(code);
+  process.stdout.write(`${JSON.stringify(reply)}\n`, () => process.exit(code));
 };
 let RuntimeClient;
 try {

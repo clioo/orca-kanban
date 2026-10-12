@@ -2461,6 +2461,7 @@ impl Engine {
             prompt: prompt.as_deref(),
             resume_of: None,
             title: Some(format!("{key} · {harness}")),
+            session_name: Some(super::ticket_session_name(&ticket)),
         })?;
         let new_id = launched["id"].as_str().unwrap_or_default().to_string();
         {

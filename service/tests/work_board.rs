@@ -280,7 +280,10 @@ fn a_stopped_claude_session_resumes_its_own_conversation_with_the_prompt_and_is_
         .unwrap()
         .to_string();
     let conversation = session["agentSessionId"].as_str().unwrap().to_string();
-    assert_eq!(command, format!("claude --session-id {conversation}; exit"));
+    assert_eq!(
+        command,
+        format!("claude --session-id {conversation} --name 'DRG-1 Update setup notes'; exit")
+    );
     b.close(session["id"].as_str().unwrap());
     let stopped = b.ok("work.ticket_show", json!({"ticketId": ticket["id"]}));
     assert_eq!(stopped["sessions"][0]["verdict"], "exited");
@@ -299,7 +302,9 @@ fn a_stopped_claude_session_resumes_its_own_conversation_with_the_prompt_and_is_
     let terminal = b.terminal(&replacement);
     let command = terminal["command"].as_str().unwrap();
     assert!(
-        command.starts_with(&format!("claude --resume {conversation} -- \"$(cat '")),
+        command.starts_with(&format!(
+            "claude --resume {conversation} --name 'DRG-1 Update setup notes' -- \"$(cat '"
+        )),
         "{command}"
     );
     assert!(command.ends_with("; exit"), "{command}");
@@ -315,32 +320,239 @@ fn a_stopped_claude_session_resumes_its_own_conversation_with_the_prompt_and_is_
     );
 }
 
+fn command_of(b: &Board, opened: &Value) -> String {
+    b.terminal(opened["session"]["id"].as_str().unwrap())["command"]
+        .as_str()
+        .unwrap()
+        .to_string()
+}
+
 #[test]
-fn other_agents_resume_with_their_own_continue_entrypoint() {
+fn a_pi_session_the_board_started_resumes_its_own_conversation() {
+    let b = Board::new();
+    let ticket = b.ticket("Long Pi work", "To do");
+    let started = b.ok(
+        "work.ticket_session_start",
+        json!({"ticketId": ticket["id"], "harnessId": "pi"}),
+    );
+    let id = started["session"]["id"].as_str().unwrap().to_string();
+    let conversation = started["session"]["agentSessionId"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    assert_eq!(
+        b.terminal(&id)["command"],
+        format!("pi --session-id {conversation} --name 'DRG-1 Long Pi work'; exit")
+    );
+    b.close(&id);
+    let opened = b.ok(
+        "work.session_open",
+        json!({"ticketId": ticket["id"], "sessionId": id}),
+    );
+    assert_eq!(opened["action"], "resumed", "{opened}");
+    assert_eq!(
+        command_of(&b, &opened),
+        format!("pi --session-id {conversation} --name 'DRG-1 Long Pi work'; exit"),
+        "never `--continue`"
+    );
+    // And again after that one stops: still the same conversation.
+    let again_id = opened["session"]["id"].as_str().unwrap().to_string();
+    b.close(&again_id);
+    let again = b.ok(
+        "work.session_open",
+        json!({"ticketId": ticket["id"], "sessionId": again_id}),
+    );
+    assert_eq!(
+        command_of(&b, &again),
+        format!("pi --session-id {conversation} --name 'DRG-1 Long Pi work'; exit")
+    );
+}
+
+#[test]
+fn a_session_the_user_started_resumes_the_conversation_orca_shows_for_it() {
+    let b = Board::new();
+    let transcripts = tempfile::tempdir().unwrap();
+    let transcript = transcripts
+        .path()
+        .join("2026-10-10T01-57-28Z_01a12387-pi.jsonl");
+    std::fs::write(&transcript, "{}\n").unwrap();
+    let cases = [
+        (
+            "pi",
+            "01a12387-8d5b-75e0-8675-7534545f20b6",
+            Some(transcript.to_string_lossy().to_string()),
+        ),
+        ("claude", "d24effbb-6b4f-4cde-9544-98bdc441c929", None),
+        ("codex", "019ff492-67d4-7b12-96f8-f91352dc4ba8", None),
+        ("opencode", "ses_4f2a91c0", None),
+    ];
+    let mut linked = Vec::new();
+    for (agent, id, path) in &cases {
+        let ticket = b.ticket(&format!("User {agent}"), "To do");
+        let handle = b.user_terminal(Some(agent));
+        b.ok(
+            "work.ticket_link_session",
+            json!({"ticketId": ticket["id"], "sessionId": handle}),
+        );
+        linked.push((
+            ticket,
+            handle.clone(),
+            b.pane_of(&handle),
+            *agent,
+            *id,
+            path.clone(),
+        ));
+    }
+    let live: Vec<(&str, &str, &str, Option<&str>)> = linked
+        .iter()
+        .map(|(_, handle, _, agent, id, path)| (handle.as_str(), *agent, *id, path.as_deref()))
+        .collect();
+    b.live_conversations(&live);
+    for (ticket, handle, _, agent, id, _) in &linked {
+        // Seen while it runs.
+        let shown = b.ok("work.ticket_show", json!({"ticketId": ticket["id"]}));
+        assert_eq!(shown["sessions"][0]["agentSessionId"], *id, "{agent}");
+        b.close(handle);
+    }
+    // The terminals are gone from Orca's snapshots.
+    b.live_conversations(&[]);
+    for (ticket, handle, _, agent, id, _) in &linked {
+        let opened = b.ok(
+            "work.session_open",
+            json!({"ticketId": ticket["id"], "sessionId": handle}),
+        );
+        assert_eq!(opened["action"], "resumed", "{agent}: {opened}");
+        let expected = match *agent {
+            "pi" => format!(
+                "pi --session {} --name '{} User pi'; exit",
+                transcript.display(),
+                ticket["key"].as_str().unwrap()
+            ),
+            "claude" => format!(
+                "claude --resume {id} --name '{} User claude'; exit",
+                ticket["key"].as_str().unwrap()
+            ),
+            "codex" => format!("codex resume {id}; exit"),
+            _ => format!("opencode --session {id}; exit"),
+        };
+        assert_eq!(command_of(&b, &opened), expected, "{agent}");
+    }
+}
+
+#[test]
+fn the_tick_records_a_running_sessions_conversation_without_the_board_open() {
+    let b = Board::new();
+    let ticket = b.ticket("Days long", "To do");
+    let handle = b.user_terminal(Some("pi"));
+    b.ok(
+        "work.ticket_link_session",
+        json!({"ticketId": ticket["id"], "sessionId": handle}),
+    );
+    b.live_conversations(&[(
+        handle.as_str(),
+        "pi",
+        "01a12c5d-4660-7048-9b8a-4878da21e591",
+        None,
+    )]);
+    // Only the scheduler runs: no board read.
+    b.engine.tick_work(work_board_svc::now_unix_ms() as f64);
+    b.close(&handle);
+    b.live_conversations(&[]);
+    let opened = b.ok(
+        "work.session_open",
+        json!({"ticketId": ticket["id"], "sessionId": handle}),
+    );
+    assert_eq!(
+        command_of(&b, &opened),
+        "pi --session-id 01a12c5d-4660-7048-9b8a-4878da21e591 --name 'DRG-1 Days long'; exit"
+    );
+}
+
+#[test]
+fn without_orcas_runtime_client_the_saved_hook_status_is_used() {
+    let b = Board::new();
+    b.edit(|state| state["noRuntime"] = json!(true));
+    let ticket = b.ticket("Saved status", "To do");
+    let handle = b.user_terminal(Some("codex"));
+    b.ok(
+        "work.ticket_link_session",
+        json!({"ticketId": ticket["id"], "sessionId": handle}),
+    );
+    let pane = b.pane_of(&handle);
+    b.hook_sessions(&[(
+        pane.as_str(),
+        "codex",
+        "019ff492-67d4-7b12-96f8-f91352dc4ba8",
+        None,
+    )]);
+    b.ok("work.ticket_show", json!({"ticketId": ticket["id"]}));
+    b.close(&handle);
+    let opened = b.ok(
+        "work.session_open",
+        json!({"ticketId": ticket["id"], "sessionId": handle}),
+    );
+    assert_eq!(
+        command_of(&b, &opened),
+        "codex resume 019ff492-67d4-7b12-96f8-f91352dc4ba8; exit"
+    );
+}
+
+#[test]
+fn a_session_in_a_workspace_orca_put_to_sleep_resumes_what_orca_kept() {
+    let b = Board::new();
+    let ticket = b.ticket("Slept", "To do");
+    let handle = b.user_terminal(Some("pi"));
+    b.ok(
+        "work.ticket_link_session",
+        json!({"ticketId": ticket["id"], "sessionId": handle}),
+    );
+    let pane = b.pane_of(&handle);
+    // Running, but no hook report reached the board (it was not looking).
+    b.ok("work.ticket_show", json!({"ticketId": ticket["id"]}));
+    b.close(&handle);
+    // Orca closed the workspace and kept the agent's conversation for the pane.
+    common::write_profile_document(
+        &b.user_data.join("profiles").join("local-default"),
+        "workspaceSession",
+        &json!({"sleepingAgentSessionsByPaneKey": {pane.clone(): {
+            "paneKey": pane, "agent": "pi",
+            "providerSession": {"key": "session_id", "id": "01a089f5-b238-73bc-bfa7-fd68fbfb5aca",
+                                "transcriptPath": "/gone/session.jsonl"}
+        }}}),
+    );
+    let opened = b.ok(
+        "work.session_open",
+        json!({"ticketId": ticket["id"], "sessionId": handle}),
+    );
+    assert_eq!(
+        command_of(&b, &opened),
+        "pi --session-id 01a089f5-b238-73bc-bfa7-fd68fbfb5aca --name 'DRG-1 Slept'; exit",
+        "a missing transcript falls back to the id"
+    );
+}
+
+#[test]
+fn a_hook_report_for_another_agent_is_not_taken_and_nothing_recorded_falls_back() {
     let b = Board::new();
     for (harness, expected) in [
         ("codex", "codex resume --last"),
-        ("pi", "pi --continue"),
         ("opencode", "opencode --continue"),
     ] {
-        let ticket = b.ticket(&format!("Resume {harness}"), "To do");
-        let started = b.ok(
-            "work.ticket_session_start",
-            json!({"ticketId": ticket["id"], "harnessId": harness}),
+        let ticket = b.ticket(&format!("Unrecorded {harness}"), "To do");
+        let handle = b.user_terminal(Some(harness));
+        b.ok(
+            "work.ticket_link_session",
+            json!({"ticketId": ticket["id"], "sessionId": handle}),
         );
-        let id = started["session"]["id"].as_str().unwrap().to_string();
-        assert_eq!(b.terminal(&id)["command"], format!("{harness}; exit"));
-        b.close(&id);
+        b.live_conversations(&[(handle.as_str(), "claude", "not-this-one", None)]);
+        let shown = b.ok("work.ticket_show", json!({"ticketId": ticket["id"]}));
+        assert!(shown["sessions"][0]["agentSessionId"].is_null(), "{shown}");
+        b.close(&handle);
         let opened = b.ok(
             "work.session_open",
-            json!({"ticketId": ticket["id"], "sessionId": id}),
+            json!({"ticketId": ticket["id"], "sessionId": handle}),
         );
-        assert_eq!(opened["action"], "resumed", "{opened}");
-        let command = b.terminal(opened["session"]["id"].as_str().unwrap())["command"]
-            .as_str()
-            .unwrap()
-            .to_string();
-        assert_eq!(command, format!("{expected}; exit"));
+        assert_eq!(command_of(&b, &opened), format!("{expected}; exit"));
     }
 }
 
@@ -763,7 +975,8 @@ fn a_claude_session_the_user_started_continues_its_folders_latest_conversation()
         .unwrap()
         .to_string();
     assert!(
-        command.starts_with("claude --continue -- \"$(cat '"),
+        command.starts_with("claude --continue --name 'DRG-1 ")
+            && command.contains(" -- \"$(cat '"),
         "{command}"
     );
     assert_eq!(b.prompt_of(&command), "carry on");
@@ -833,4 +1046,44 @@ fn an_explicit_ticket_workspace_is_used_instead_of_creating_a_new_checkout() {
     );
     assert_eq!(started["session"]["workspaceId"], b.main_worktree());
     assert_eq!(b.state()["worktrees"].as_array().unwrap().len(), 1);
+}
+
+#[test]
+fn a_session_is_named_after_its_ticket_whatever_the_title_holds() {
+    let b = Board::new();
+    let ticket = b.ok(
+        "work.ticket_create",
+        json!({"title": "Fix the \"it's\" bug\nand $HOME `rm` stuff that goes on and on and on and on and on and on and on and on", "projectId": common::REPO_ID}),
+    );
+    let started = b.ok(
+        "work.ticket_session_start",
+        json!({"ticketId": ticket["id"], "harnessId": "claude"}),
+    );
+    let command = b.terminal(started["session"]["id"].as_str().unwrap())["command"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    // One line, single-quoted: nothing in the title reaches the shell.
+    let name = command
+        .split(" --name '")
+        .nth(1)
+        .and_then(|rest| rest.strip_suffix("'; exit"))
+        .unwrap_or_else(|| panic!("{command}"))
+        .replace("'\\''", "'");
+    assert!(
+        name.starts_with(r#"DRG-1 Fix the "it's" bug and $HOME `rm` stuff"#),
+        "{name}"
+    );
+    assert!(!name.contains('\n'));
+    assert_eq!(name.chars().count() - "DRG-1 ".len(), 80, "{name}");
+    // Codex has no session name option: its launch is unchanged.
+    let codex = b.ok(
+        "work.ticket_session_start",
+        json!({"ticketId": ticket["id"], "harnessId": "codex"}),
+    );
+    let command = b.terminal(codex["session"]["id"].as_str().unwrap())["command"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    assert_eq!(command, "codex; exit");
 }

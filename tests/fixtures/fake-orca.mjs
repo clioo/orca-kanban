@@ -77,6 +77,29 @@ if (words[0] === "rpc") {
   switch (method) {
     case "projectGroup.list":
       reply({ groups: state.projectGroups });
+    case "session.tabs.listAll":
+      // Orca's live tab snapshots: each live terminal's agent status with
+      // the conversation Orca's hooks reported (`providerSessions` by handle).
+      reply({
+        snapshots: [
+          {
+            tabs: state.terminals
+              .filter((t) => t.live && state.providerSessions?.[t.handle])
+              .map((t) => {
+                const p = state.providerSessions[t.handle];
+                return {
+                  agentStatus: {
+                    paneKey: `${t.tabId}:${t.leafId}`,
+                    terminalHandle: t.handle,
+                    agentType: p.agent,
+                    state: "done",
+                    providerSession: { key: "session_id", id: p.id, transcriptPath: p.path ?? null },
+                  },
+                };
+              }),
+          },
+        ],
+      });
     case "folderWorkspace.list":
       reply({ folderWorkspaces: state.folderWorkspaces });
     case "folderWorkspace.create": {

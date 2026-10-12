@@ -11,12 +11,22 @@
 //! - unverifiable: Orca could not be read, which never proves an exit.
 //!
 //! Starting an agent types `<agent> <Orca's default args> <resume> <prompt>;
-//! exit` into a new terminal of the ticket's worktree. Claude gets a
-//! board-chosen `--session-id`, so a stopped Claude session the board
-//! started (or brought from Drogon) resumes that exact conversation; one the
-//! user started in Orca, and the other agents, resume with their own
-//! most-recent-in-this-folder entrypoint (Claude/Pi/OpenCode `--continue`,
-//! Codex `resume --last`). Prompts travel through a 0600 file read by the shell
+//! exit` into a new terminal of the ticket's worktree. A stopped session
+//! resumes its own conversation, never the folder's latest (folder
+//! workspaces share one folder, and a conversation can last days):
+//!
+//! - Claude and Pi sessions the board starts get a board-chosen
+//!   `--session-id`;
+//! - while any linked session runs, the board records the pane it runs in and
+//!   the conversation Orca's agent hooks report for that pane (its id and
+//!   transcript), and Orca's record of a pane it put to sleep fills in what
+//!   was missed;
+//! - resuming uses that id: Claude `--resume <id>`, Pi `--session <file>`
+//!   (or `--session-id <id>`), Codex `resume <id>`, OpenCode `--session <id>`.
+//!   Only a session with no recorded conversation falls back to the agent's
+//!   most-recent-in-this-folder entrypoint.
+//!
+//! Prompts travel through a 0600 file read by the shell
 //! (`"$(cat …; rm -f …)"`), never through the typed command line.
 
 use std::path::PathBuf;
@@ -32,6 +42,9 @@ use crate::protocol::RpcError;
 
 pub const HARNESSES: &[&str] = &["claude", "codex", "opencode", "pi", "antigravity"];
 
+/// How often running sessions' conversations are read from Orca.
+pub(crate) const CONVERSATIONS_TTL: std::time::Duration = std::time::Duration::from_secs(15);
+
 #[derive(Debug, Clone)]
 pub(crate) struct SessionRow {
     pub id: String,
@@ -43,6 +56,8 @@ pub(crate) struct SessionRow {
     #[allow(dead_code)]
     pub verdict: String,
     pub created_at: i64,
+    pub pane_key: Option<String>,
+    pub agent_session_path: Option<String>,
 }
 
 fn row_from(r: &rusqlite::Row) -> rusqlite::Result<SessionRow> {
@@ -55,10 +70,12 @@ fn row_from(r: &rusqlite::Row) -> rusqlite::Result<SessionRow> {
         prompt_preview: r.get(5)?,
         verdict: r.get(6)?,
         created_at: r.get(7)?,
+        pane_key: r.get(8)?,
+        agent_session_path: r.get(9)?,
     })
 }
 
-const SESSION_SELECT: &str = "SELECT id, workspace_id, harness_id, agent_session_id, title, prompt_preview, verdict, created_at FROM sessions";
+const SESSION_SELECT: &str = "SELECT id, workspace_id, harness_id, agent_session_id, title, prompt_preview, verdict, created_at, pane_key, agent_session_path FROM sessions";
 
 pub(crate) fn get_row(
     conn: &rusqlite::Connection,
@@ -99,12 +116,16 @@ pub(crate) struct StartRequest<'a> {
     /// The session this one resumes (its row says how).
     pub resume_of: Option<&'a str>,
     pub title: Option<String>,
+    /// The agent's own session name (Claude and Pi `--name`), so the
+    /// conversation is found by its ticket in the agent's session list.
+    pub session_name: Option<String>,
 }
 
 impl Engine {
     /// The next liveness read goes to Orca (an agent just changed state).
     pub fn mark_live_stale(&self) {
         self.live.lock().unwrap().read_at = None;
+        *self.conversations_read_at.lock().unwrap() = None;
     }
 
     /// Re-reads Orca's live terminals and agents (throttled unless forced)
@@ -161,6 +182,73 @@ impl Engine {
                 let _ = conn.execute(
                     "UPDATE sessions SET verdict = 'exited', ended_at = ?2 WHERE id = ?1",
                     params![id, now],
+                );
+            }
+        }
+        drop(conn);
+        self.record_conversations();
+    }
+
+    /// For every running session the board knows: the pane it runs in, and
+    /// the conversation Orca's agent hooks report there (the latest one, so
+    /// a `/new` inside the agent is followed).
+    fn record_conversations(&self) {
+        self.record_conversations_now(false);
+    }
+
+    /// `force` reads Orca now; otherwise at most every
+    /// [`CONVERSATIONS_TTL`] (each read runs Orca's runtime client).
+    pub(crate) fn record_conversations_now(&self, force: bool) {
+        let panes: Vec<(String, String)> = {
+            let live = self.live.lock().unwrap();
+            live.terminals
+                .values()
+                .filter_map(|t| Some((t.handle.clone(), t.pane_key.clone()?)))
+                .collect()
+        };
+        if panes.is_empty() {
+            return;
+        }
+        let known: Vec<(String, String)> = {
+            let conn = self.db.lock().unwrap();
+            panes
+                .into_iter()
+                .filter(|(handle, _)| get_row(&conn, handle).ok().flatten().is_some())
+                .collect()
+        };
+        if known.is_empty() {
+            return;
+        }
+        {
+            let mut read = self.conversations_read_at.lock().unwrap();
+            if !force && read.is_some_and(|at| at.elapsed() < CONVERSATIONS_TTL) {
+                return;
+            }
+            *read = Some(Instant::now());
+        }
+        let reported = self.orca.provider_sessions();
+        let conn = self.db.lock().unwrap();
+        for (handle, pane) in known {
+            let Ok(Some(row)) = get_row(&conn, &handle) else {
+                continue;
+            };
+            if row.pane_key.as_deref() != Some(pane.as_str()) {
+                let _ = conn.execute(
+                    "UPDATE sessions SET pane_key = ?2 WHERE id = ?1",
+                    params![handle, pane],
+                );
+            }
+            if let Some(seen) = reported.get(&handle).or_else(|| reported.get(&pane))
+                && row.harness_id.as_deref().is_none_or(|h| h == seen.agent)
+                && HARNESSES.contains(&seen.agent.as_str())
+                && is_plain_word(&seen.id)
+                && (row.agent_session_id.as_deref() != Some(seen.id.as_str())
+                    || row.agent_session_path != seen.path)
+            {
+                let _ = conn.execute(
+                    "UPDATE sessions SET agent_session_id = ?2, agent_session_path = ?3,
+                     harness_id = COALESCE(harness_id, ?4) WHERE id = ?1",
+                    params![handle, seen.id, seen.path, seen.agent],
                 );
             }
         }
@@ -295,10 +383,13 @@ impl Engine {
         let harness = agent_type.filter(|t| HARNESSES.contains(&t.as_str()));
         let conn = self.db.lock().unwrap();
         conn.execute(
-            "INSERT OR IGNORE INTO sessions (id, workspace_id, harness_id, title, verdict, created_at) VALUES (?1, ?2, ?3, ?4, 'live', ?5)",
-            params![id, terminal.worktree_id, harness, terminal.title, now_unix_ms() as i64],
+            "INSERT OR IGNORE INTO sessions (id, workspace_id, harness_id, title, verdict, created_at, pane_key) VALUES (?1, ?2, ?3, ?4, 'live', ?5, ?6)",
+            params![id, terminal.worktree_id, harness, terminal.title, now_unix_ms() as i64, terminal.pane_key],
         )
         .map_err(error::from_sqlite)?;
+        drop(conn);
+        // What Orca already knows about it.
+        self.record_conversations_now(true);
         Ok(())
     }
 
@@ -326,39 +417,28 @@ impl Engine {
             None => None,
         };
         let harness = request.harness_id;
-        let mut agent_session = None;
-        let mut resume_args: Vec<String> = Vec::new();
-        let mut resumed = false;
-        if let Some(prior) = &prior {
-            match (harness, prior.agent_session_id.as_deref()) {
-                ("claude", Some(id)) if is_plain_word(id) => {
-                    resume_args = vec!["--resume".into(), id.to_string()];
-                    agent_session = Some(id.to_string());
-                    resumed = true;
-                }
-                // A Claude session the board did not start: Orca keeps its
-                // conversation id to itself, so it continues the latest
-                // conversation in that folder (Drogon's own fallback).
-                ("claude", _) => {
-                    resume_args = vec!["--continue".into()];
-                    resumed = true;
-                }
-                ("codex", _) => {
-                    resume_args = vec!["resume".into(), "--last".into()];
-                    resumed = true;
-                }
-                ("opencode" | "pi" | "antigravity", _) => {
-                    resume_args = vec!["--continue".into()];
-                    resumed = true;
-                }
-                _ => {}
-            }
-        }
-        if harness == "claude" && agent_session.is_none() && !resumed {
-            let id = uuid::Uuid::new_v4().to_string();
-            resume_args = vec!["--session-id".into(), id.clone()];
-            agent_session = Some(id);
-        }
+        // What the stopped session was running: recorded while it ran, or
+        // what Orca kept for its pane when it put the workspace to sleep.
+        let conversation = prior.as_ref().and_then(|prior| {
+            let recorded = prior
+                .agent_session_id
+                .clone()
+                .filter(|id| is_plain_word(id))
+                .map(|id| crate::orca::ProviderSession {
+                    agent: harness.to_string(),
+                    id,
+                    path: prior.agent_session_path.clone(),
+                });
+            recorded.or_else(|| {
+                let pane = prior.pane_key.as_deref()?;
+                self.orca
+                    .slept_provider_session(pane)
+                    .or_else(|| self.orca.provider_sessions().remove(pane))
+                    .filter(|s| s.agent == harness && is_plain_word(&s.id))
+            })
+        });
+        let (resume_args, resumed, agent_session, agent_path) =
+            resume_plan(harness, prior.is_some(), conversation);
         let settings = self.orca.settings();
         let command = settings["agentCmdOverrides"][harness]
             .as_str()
@@ -389,6 +469,14 @@ impl Engine {
                 shell_quote(arg)
             });
         }
+        if let Some(name) = request
+            .session_name
+            .as_deref()
+            .filter(|_| matches!(harness, "claude" | "pi"))
+        {
+            line.push_str(" --name ");
+            line.push_str(&shell_quote(name));
+        }
         if let Some(prompt) = request.prompt.map(str::trim).filter(|p| !p.is_empty()) {
             let file = self.write_prompt_file(prompt)?;
             let read = format!(
@@ -411,8 +499,8 @@ impl Engine {
         {
             let conn = self.db.lock().unwrap();
             conn.execute(
-                "INSERT OR REPLACE INTO sessions (id, workspace_id, harness_id, agent_session_id, title, prompt_preview, verdict, created_at)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, 'live', ?7)",
+                "INSERT OR REPLACE INTO sessions (id, workspace_id, harness_id, agent_session_id, title, prompt_preview, verdict, created_at, agent_session_path)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, 'live', ?7, ?8)",
                 params![
                     handle,
                     request.workspace_id,
@@ -420,7 +508,8 @@ impl Engine {
                     agent_session,
                     title,
                     request.prompt.map(preview),
-                    now_unix_ms() as i64
+                    now_unix_ms() as i64,
+                    agent_path
                 ],
             )
             .map_err(error::from_sqlite)?;
@@ -520,6 +609,51 @@ fn default_command(harness: &str) -> &'static str {
         "antigravity" => "agy",
         _ => "claude",
     }
+}
+
+/// How to start `harness`: the resume arguments, whether it resumes, and
+/// the conversation id (and transcript) the new session runs.
+fn resume_plan(
+    harness: &str,
+    resuming: bool,
+    conversation: Option<crate::orca::ProviderSession>,
+) -> (Vec<String>, bool, Option<String>, Option<String>) {
+    let args = |a: &[&str]| a.iter().map(|s| s.to_string()).collect::<Vec<_>>();
+    if resuming {
+        if let Some(c) = conversation {
+            let id = c.id.clone();
+            let path = c.path.clone().filter(|p| std::path::Path::new(p).is_file());
+            let exact = match harness {
+                "claude" => Some(args(&["--resume", &id])),
+                // The transcript names the exact conversation wherever it
+                // lives; the id finds it in this folder's sessions.
+                "pi" => Some(match &path {
+                    Some(p) => vec!["--session".to_string(), p.clone()],
+                    None => args(&["--session-id", &id]),
+                }),
+                "codex" => Some(args(&["resume", &id])),
+                "opencode" => Some(args(&["--session", &id])),
+                _ => None,
+            };
+            if let Some(exact) = exact {
+                return (exact, true, Some(id), path);
+            }
+        }
+        // No recorded conversation: the agent's most recent in this folder.
+        return match harness {
+            "codex" => (args(&["resume", "--last"]), true, None, None),
+            "claude" | "opencode" | "pi" | "antigravity" => {
+                (args(&["--continue"]), true, None, None)
+            }
+            _ => (Vec::new(), false, None, None),
+        };
+    }
+    // A fresh Claude or Pi session gets an id the board knows from the start.
+    if matches!(harness, "claude" | "pi") {
+        let id = uuid::Uuid::new_v4().to_string();
+        return (args(&["--session-id", &id]), false, Some(id), None);
+    }
+    (Vec::new(), false, None, None)
 }
 
 #[cfg(test)]

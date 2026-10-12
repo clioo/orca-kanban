@@ -858,6 +858,23 @@ fn require_workspace(conn: &Connection, workspace_id: &str) -> Result<(), RpcErr
         .ok_or_else(|| error::not_found(format!("workspace {workspace_id} not found")))
 }
 
+/// The name a ticket's agent sessions go by: `<key> <title>` (the
+/// provider's key on an imported ticket), on one line, the title cut at 80
+/// characters.
+fn ticket_session_name(ticket: &Ticket) -> String {
+    let key = ticket.ext.key.as_deref().unwrap_or(&ticket.key);
+    let title: String = ticket
+        .title
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+        .chars()
+        .filter(|c| !c.is_control())
+        .take(80)
+        .collect();
+    format!("{key} {}", title.trim()).trim().to_string()
+}
+
 /// Renumbers a column's tickets 0..n with `moving` inserted at `index`.
 fn place_ticket(
     conn: &Connection,
@@ -1898,12 +1915,19 @@ impl Engine {
             return Ok(json!({ "action": "open", "session": row }));
         };
         let workspace = row["workspaceId"].as_str().unwrap_or_default().to_string();
+        let session_name = {
+            let conn = self.db.lock().unwrap();
+            get_ticket(&conn, &required(params, "ticketId")?)
+                .ok()
+                .map(|t| ticket_session_name(&t))
+        };
         let launched = self.start_agent(crate::sessions::StartRequest {
             workspace_id: &workspace,
             harness_id: &harness,
             prompt: None,
             resume_of: Some(&session_id),
             title: row["title"].as_str().map(str::to_owned),
+            session_name,
         })?;
         Ok(json!({
             "action": if launched["agentResume"] == "fresh" { "started" } else { "resumed" },
@@ -2245,6 +2269,7 @@ impl Engine {
             prompt: Some(message),
             resume_of: Some(session_id),
             title: row["title"].as_str().map(str::to_owned),
+            session_name: Some(ticket_session_name(ticket)),
         }) {
             Ok(launched) => json!({
                 "sessionId": session_id,
@@ -2280,6 +2305,7 @@ impl Engine {
             prompt: Some(message),
             resume_of: None,
             title: Some(format!("{key} · {harness}")),
+            session_name: Some(ticket_session_name(ticket)),
         }) {
             Ok(launched) => {
                 let new_id = launched["id"].as_str().unwrap_or_default().to_string();
@@ -2311,6 +2337,20 @@ impl Engine {
     pub fn tick_work(&self, now_ms: f64) {
         if self.is_quiescent() {
             return;
+        }
+        // Linked sessions keep their conversation recorded while they run,
+        // even when nobody has the board open for days.
+        let running = {
+            let conn = self.db.lock().unwrap();
+            conn.query_row(
+                "SELECT EXISTS(SELECT 1 FROM sessions WHERE verdict = 'live')",
+                [],
+                |r| r.get::<_, bool>(0),
+            )
+            .unwrap_or(false)
+        };
+        if running {
+            self.refresh_live(false);
         }
         let now = now_ms as i64;
         let columns = {
