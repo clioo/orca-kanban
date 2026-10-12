@@ -460,11 +460,105 @@ pub fn all_profile_settings(user_data: &Path) -> Vec<Value> {
         .collect()
 }
 
+/// The agent conversation Orca saw in a pane: the agent's own session id
+/// and, when the agent reports it, its transcript file.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ProviderSession {
+    pub agent: String,
+    pub id: String,
+    pub path: Option<String>,
+}
+
+fn provider_session_of(entry: &Value) -> Option<ProviderSession> {
+    let session = &entry["providerSession"];
+    let id = session["id"].as_str().filter(|id| !id.trim().is_empty())?;
+    let agent = entry["agent"]
+        .as_str()
+        .or(entry["source"].as_str())
+        .or(entry["agentType"].as_str())
+        .or(entry["agentPresence"]["agent"].as_str())
+        .or(entry["payload"]["agentType"].as_str())?;
+    Some(ProviderSession {
+        agent: agent.to_string(),
+        id: id.to_string(),
+        path: session["transcriptPath"]
+            .as_str()
+            .filter(|p| !p.is_empty())
+            .map(str::to_owned),
+    })
+}
+
+impl Orca {
+    /// The conversation running in each terminal, live: Orca's tab
+    /// snapshots (`session.tabs.listAll`, each tab's `agentStatus`), keyed by
+    /// terminal handle and by pane key. Without Orca's runtime client, the
+    /// hook status Orca saves (by pane key only).
+    pub fn provider_sessions(&self) -> std::collections::HashMap<String, ProviderSession> {
+        let Ok(result) = self.rpc("session.tabs.listAll", &json!({})) else {
+            return self.saved_provider_sessions();
+        };
+        let mut out = std::collections::HashMap::new();
+        for snapshot in result["snapshots"].as_array().into_iter().flatten() {
+            for tab in snapshot["tabs"].as_array().into_iter().flatten() {
+                let status = &tab["agentStatus"];
+                let Some(seen) = provider_session_of(status) else {
+                    continue;
+                };
+                for key in [
+                    status["terminalHandle"].as_str(),
+                    status["paneKey"].as_str(),
+                ]
+                .into_iter()
+                .flatten()
+                {
+                    out.insert(key.to_string(), seen.clone());
+                }
+            }
+        }
+        out
+    }
+
+    /// The hook status Orca saves (`<user data>/agent-hooks/last-status.json`,
+    /// written now and then, not live), by pane key. Empty when unreadable.
+    fn saved_provider_sessions(&self) -> std::collections::HashMap<String, ProviderSession> {
+        let path = self.user_data.join("agent-hooks").join("last-status.json");
+        let Ok(text) = std::fs::read_to_string(path) else {
+            return Default::default();
+        };
+        let Ok(data) = serde_json::from_str::<Value>(&text) else {
+            return Default::default();
+        };
+        data["entries"]
+            .as_object()
+            .into_iter()
+            .flatten()
+            .filter_map(|(pane, entry)| Some((pane.clone(), provider_session_of(entry)?)))
+            .collect()
+    }
+
+    /// The conversation Orca recorded for a pane it put to sleep (a closed
+    /// or hibernated workspace), from any profile.
+    pub fn slept_provider_session(&self, pane_key: &str) -> Option<ProviderSession> {
+        profile_dirs(&self.user_data.join("profiles"))
+            .iter()
+            .find_map(|dir| {
+                let session = profile_document(dir, "workspaceSession")?;
+                provider_session_of(&session["sleepingAgentSessionsByPaneKey"][pane_key])
+            })
+    }
+}
+
 /// One profile's settings. Orca 1.4.22x keeps profile state in SQLite
 /// (`profile-state.db`, document `settings`) and leaves `orca-data.json` as
 /// a frozen export; earlier Orcas keep it in `orca-data.json`. Read-only:
 /// Orca owns both.
 pub fn profile_settings(dir: &Path) -> Option<Value> {
+    profile_document(dir, "settings")
+}
+
+/// One document of a profile's state (`settings`, `workspaceSession`, …):
+/// from `profile-state.db` on Orca 1.4.22x, else `orca-data.json`.
+fn profile_document(dir: &Path, domain: &str) -> Option<Value> {
     let db = dir.join("profile-state.db");
     if db.is_file() {
         let read = || -> rusqlite::Result<String> {
@@ -475,8 +569,8 @@ pub fn profile_settings(dir: &Path) -> Option<Value> {
             )?;
             conn.busy_timeout(Duration::from_secs(2))?;
             conn.query_row(
-                "SELECT payload FROM profile_state_documents WHERE domain = 'settings'",
-                [],
+                "SELECT payload FROM profile_state_documents WHERE domain = ?1",
+                [domain],
                 |r| r.get(0),
             )
         };

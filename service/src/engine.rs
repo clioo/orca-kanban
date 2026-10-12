@@ -42,6 +42,7 @@ pub struct Engine {
     mirror_read_at: Mutex<Option<Instant>>,
     quiescent: AtomicBool,
     board_cli: Mutex<Option<PathBuf>>,
+    pub(crate) conversations_read_at: Mutex<Option<Instant>>,
 }
 
 impl Engine {
@@ -88,6 +89,7 @@ impl Engine {
             mirror_read_at: Mutex::new(None),
             quiescent: AtomicBool::new(false),
             board_cli: Mutex::new(None),
+            conversations_read_at: Mutex::new(None),
         })
     }
 
@@ -445,7 +447,18 @@ fn apply_mirror_schema(tx: &rusqlite::Transaction) -> rusqlite::Result<()> {
             key TEXT PRIMARY KEY,
             value TEXT NOT NULL
         );",
-    )
+    )?;
+    // The Orca pane a session ran in and its agent's transcript, so a
+    // stopped session resumes its own conversation (added in 0.2.5).
+    for column in ["pane_key", "agent_session_path"] {
+        let present = tx
+            .prepare("SELECT 1 FROM pragma_table_info('sessions') WHERE name = ?1")?
+            .exists([column])?;
+        if !present {
+            tx.execute_batch(&format!("ALTER TABLE sessions ADD COLUMN {column} TEXT"))?;
+        }
+    }
+    Ok(())
 }
 
 /// Milliseconds since the Unix epoch.

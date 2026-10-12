@@ -115,6 +115,58 @@ impl Board {
         );
     }
 
+    /// The conversation Orca's tab snapshots show live for terminals
+    /// (`session.tabs.listAll`): `(handle, agent, id, transcript)`.
+    pub fn live_conversations(&self, sessions: &[(&str, &str, &str, Option<&str>)]) {
+        let map: serde_json::Map<String, Value> = sessions
+            .iter()
+            .map(|(handle, agent, id, path)| {
+                (
+                    handle.to_string(),
+                    json!({"agent": agent, "id": id, "path": path}),
+                )
+            })
+            .collect();
+        self.edit(|state| state["providerSessions"] = Value::Object(map));
+    }
+
+    /// What Orca's agent hooks report for panes, as Orca saves it
+    /// (`agent-hooks/last-status.json`): `(paneKey, agent, id, transcript)`.
+    pub fn hook_sessions(&self, sessions: &[(&str, &str, &str, Option<&str>)]) {
+        let entries: serde_json::Map<String, Value> = sessions
+            .iter()
+            .map(|(pane, agent, id, path)| {
+                (
+                    pane.to_string(),
+                    json!({
+                        "paneKey": pane, "source": agent, "agentPresence": {"agent": agent},
+                        "hookEventName": "session_start",
+                        "providerSession": {"key": "session_id", "id": id, "transcriptPath": path},
+                        "payload": {"state": "done", "agentType": agent}
+                    }),
+                )
+            })
+            .collect();
+        let dir = self.user_data.join("agent-hooks");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(
+            dir.join("last-status.json"),
+            json!({"version": 1, "entries": entries}).to_string(),
+        )
+        .unwrap();
+        self.engine.mark_live_stale();
+    }
+
+    /// The pane key the fake Orca gives a terminal (`tabId:leafId`).
+    pub fn pane_of(&self, handle: &str) -> String {
+        let t = self.terminal(handle);
+        format!(
+            "{}:{}",
+            t["tabId"].as_str().unwrap(),
+            t["leafId"].as_str().unwrap()
+        )
+    }
+
     pub fn call(&self, method: &str, params: Value) -> Result<Value, String> {
         self.engine
             .dispatch(method, &params)
@@ -241,6 +293,11 @@ pub fn linked_ids(ticket: &Value) -> Vec<String> {
 
 /// Writes a profile store shaped like Orca 1.4.22x's `profile-state.db`.
 pub fn write_profile_store(dir: &Path, settings: &Value) {
+    write_profile_document(dir, "settings", settings);
+}
+
+/// One document (`settings`, `workspaceSession`, …) of that store.
+pub fn write_profile_document(dir: &Path, domain: &str, payload: &Value) {
     std::fs::create_dir_all(dir).unwrap();
     let conn = rusqlite::Connection::open(dir.join("profile-state.db")).unwrap();
     conn.execute_batch(
@@ -252,9 +309,9 @@ pub fn write_profile_store(dir: &Path, settings: &Value) {
     )
     .unwrap();
     conn.execute(
-        "INSERT INTO profile_state_documents VALUES ('settings', ?1, 1, 1, 0, '')
+        "INSERT INTO profile_state_documents VALUES (?1, ?2, 1, 1, 0, '')
          ON CONFLICT(domain) DO UPDATE SET payload = excluded.payload, revision = revision + 1",
-        [settings.to_string()],
+        [domain.to_string(), payload.to_string()],
     )
     .unwrap();
 }

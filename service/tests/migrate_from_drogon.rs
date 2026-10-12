@@ -154,7 +154,10 @@ fn a_drogon_board_comes_over_onto_orcas_repos_worktrees_and_resumable_sessions()
         .as_str()
         .unwrap()
         .to_string();
-    assert_eq!(command, "claude --resume conv-1; exit");
+    assert_eq!(
+        command, "claude --resume conv-1 --name 'DRG-1 Bring me over'; exit",
+        "named after its ticket"
+    );
 
     // Once is enough: a second run asks before replacing.
     assert!(

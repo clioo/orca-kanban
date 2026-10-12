@@ -381,12 +381,12 @@ try {
     const ids = (await ticket("DRG-1")).sessions.map((s) => s.id);
     return !ids.includes(agentB) && ids.length === 2 ? ids.find((id) => id !== agentA) : false;
   });
-  // A Claude session the user started continues its folder's latest
-  // conversation (Orca keeps the conversation id to itself).
-  // Linking the new terminal precedes its shell actually launching the agent.
+  // A Claude session the user started resumes its own conversation: the one
+  // Orca's agent hooks reported for its pane while it ran, never the
+  // folder's latest. Linking the new terminal precedes its shell launching.
   try {
-    await waitFor("the replacement agent launched in continue mode", async () =>
-      launches().some((l) => l.agent === "claude" && l.mode === "continue"),
+    await waitFor("the replacement resumed agent B's own conversation", async () =>
+      launches().some((l) => l.agent === "claude" && l.mode === "resume" && l.session === sidB),
     );
   } catch (error) {
     const screen = await orca(["terminal", "read", "--terminal", replacement], { allowFailure: true });
@@ -395,7 +395,39 @@ try {
   }
   const replacementTab = (await terminalOf(replacement)).tabId;
   await waitFor("replacement in front", async () => (await activeTabId()) === replacementTab);
+  assert.ok(!launches().some((l) => l.mode === "continue"), "no folder-latest resume");
   check("a-stopped-session-is-resumed-by-its-click-and-replaces-the-old-link");
+
+  // A Pi session the board starts resumes that same conversation by id.
+  const piStart = await rpc("work.ticket_session_start", { ticketId: "DRG-1", harnessId: "pi" });
+  const piConversation = piStart.session.agentSessionId;
+  assert.ok(piConversation, JSON.stringify(piStart.session));
+  await waitFor("pi started with its id", async () => launches().some((l) => l.agent === "pi" && l.session === piConversation));
+  assert.equal(
+    launches().find((l) => l.agent === "pi" && l.session === piConversation).name,
+    "DRG-1 Improve Jira resume",
+    "the Pi session is named after its ticket",
+  );
+  await orca(["terminal", "send", "--terminal", piStart.session.id, "--text", "/exit", "--enter"]);
+  await waitFor("pi exited", async () => !(await orca(["terminal", "list"])).terminals.some((t) => t.handle === piStart.session.id));
+  const piOpened = await rpc("work.session_open", { ticketId: "DRG-1", sessionId: piStart.session.id });
+  assert.equal(piOpened.action, "resumed");
+  await waitFor("pi resumed the same conversation", async () =>
+    launches().filter((l) => l.agent === "pi" && l.session === piConversation).length === 2,
+  );
+  await orca(["terminal", "close", "--terminal", piOpened.session.id], { allowFailure: true });
+  await rpc("work.ticket_unlink_session", { ticketId: "DRG-1", sessionId: piOpened.session.id });
+  assert.ok(
+    launches().filter((l) => l.agent === "pi" && l.session === piConversation).every((l) => l.name === "DRG-1 Improve Jira resume"),
+    "and keeps that name when resumed",
+  );
+  assert.equal(
+    launches().find((l) => l.agent === "claude" && l.mode === "resume" && l.session === sidB)?.name,
+    "DRG-1 Improve Jira resume",
+    "a resumed Claude session is named after its ticket too",
+  );
+  check("a-pi-session-resumes-its-own-conversation-not-the-folders-latest");
+  check("board-started-sessions-are-named-after-their-ticket");
 
   await page.getByRole("button", { name: "Review column actions" }).click();
   await page.getByRole("menuitem", { name: "Configure prompt…" }).click();

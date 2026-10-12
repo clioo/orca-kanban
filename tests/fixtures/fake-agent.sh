@@ -9,7 +9,7 @@ self_dir=$(cd "$(dirname "$0")" && pwd -P)
 home=$(dirname "$(dirname "$self_dir")")
 name=$(basename "$0")
 data="$home/agent-data"; mkdir -p "$data"
-sid=""; mode=new; prompt=""
+sid=""; mode=new; prompt=""; session_name=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --session-id) sid=$2; shift 2 ;;
@@ -17,6 +17,7 @@ while [ $# -gt 0 ]; do
     --continue|-c) mode=continue; shift ;;
     resume) mode=resume; if [ "${2:-}" = "--last" ]; then mode=continue; shift 2; else sid=${2:-}; shift 2; fi ;;
     --prompt|--prompt-interactive) prompt=$2; shift 2 ;;
+    --name|-n) session_name=$2; shift 2 ;;
     --prompt=*) prompt=${1#--prompt=}; shift ;;
     --) shift; prompt=${1:-}; shift ;;
     --*) shift ;;
@@ -24,7 +25,8 @@ while [ $# -gt 0 ]; do
   esac
 done
 [ -n "$sid" ] || sid=$(uuidgen | tr 'A-Z' 'a-z')
-printf '%s\n' "{\"agent\":\"$name\",\"mode\":\"$mode\",\"session\":\"$sid\",\"cwd\":\"$PWD\"}" >> "$data/launches.jsonl"
+esc_name=$(printf '%s' "$session_name" | sed 's/\\/\\\\/g; s/"/\\"/g')
+printf '%s\n' "{\"agent\":\"$name\",\"mode\":\"$mode\",\"session\":\"$sid\",\"name\":\"$esc_name\",\"cwd\":\"$PWD\"}" >> "$data/launches.jsonl"
 hook() { [ "$name" = claude ] || return 0; printf '%s' "$1" | /bin/sh "$home/.orca/agent-hooks/claude-hook.sh" >/dev/null 2>&1; }
 tp="$data/$sid.jsonl"; touch "$tp"
 src=startup; [ "$mode" = new ] || src=resume
